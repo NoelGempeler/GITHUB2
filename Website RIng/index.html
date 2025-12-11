@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>anell</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- React & ReactDOM -->
+    <script
+      src="https://unpkg.com/react@18/umd/react.development.js"
+      crossorigin
+    ></script>
+    <script
+      src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"
+      crossorigin
+    ></script>
+
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+      /* Global Monospace & Selection Config */
+      body {
+        font-family: "Courier New", Courier, monospace;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+
+      ::selection {
+        background-color: #f43f5e;
+        color: white;
+      }
+
+      /* Hide scrollbar for clean carousel */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+    </style>
+  </head>
+
+  <body
+    class="bg-white text-black transition-colors duration-700 font-mono uppercase text-xs"
+  >
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+      // ---------------------------------------------------------
+      // DATA CONFIGURATION
+      // ---------------------------------------------------------
+
+      const PRODUCTS = [
+        {
+          id: "001",
+          name: "The Ether Loop",
+          folderName: "ring1",
+          paymentLink: "https://buy.stripe.com/PLACEHOLDER_LINK_001",
+        },
+        {
+          id: "002",
+          name: "The Void Band",
+          folderName: "ring2",
+          paymentLink: "https://buy.stripe.com/PLACEHOLDER_LINK_002",
+        },
+      ];
+
+      const SIZES = [48, 50, 52, 54, 56, 58, 60, 62, 64];
+
+      // ---------------------------------------------------------
+      // MAIN APP COMPONENT
+      // ---------------------------------------------------------
+      const App = () => {
+        const [activeProductId, setActiveProductId] = React.useState("001");
+        const [selectedSize, setSelectedSize] = React.useState(54);
+        const [isInverted, setIsInverted] = React.useState(false);
+
+        // Ref for carousel to reset scroll when ring changes
+        const carouselRef = React.useRef(null);
+
+        const activeProduct =
+          PRODUCTS.find((p) => p.id === activeProductId) || PRODUCTS[0];
+
+        // Reset carousel scroll when product changes
+        React.useEffect(() => {
+          if (carouselRef.current) {
+            carouselRef.current.scrollTo({ left: 0, behavior: "auto" });
+          }
+        }, [activeProductId]);
+
+        const scrollToShop = () => {
+          const el = document.getElementById("shop-section");
+          if (el) el.scrollIntoView({ behavior: "smooth" });
+        };
+
+        const handleBuy = () => {
+          if (!activeProduct.paymentLink) {
+            alert("Payment link not configured.");
+            return;
+          }
+          window.open(activeProduct.paymentLink, "_blank");
+        };
+
+        return (
+          <div
+            className={`relative min-h-screen transition-colors duration-700 ease-in-out overflow-x-hidden ${
+              isInverted ? "bg-black text-white" : "bg-white text-black"
+            }`}
+          >
+            {/* --- 1. NAVIGATION BAR (The Switch) --- */}
+            <nav className="fixed top-0 left-0 w-full p-[5px] flex justify-between items-center z-50 mix-blend-difference text-white">
+              {/* 'anell' is now the toggle button */}
+              <button
+                onClick={() => setIsInverted(!isInverted)}
+                className="font-bold tracking-tighter hover:opacity-50 transition-opacity cursor-pointer"
+              >
+                anell
+              </button>
+            </nav>
+
+            {/* --- 2. HERO HEADER (Video Only) --- */}
+            <header
+              className="relative w-full h-screen overflow-hidden cursor-pointer"
+              onClick={scrollToShop}
+            >
+              <div
+                className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ${
+                  isInverted ? "invert" : ""
+                }`}
+              >
+                <video
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover"
+                  src="./output_touchdesigner/neuestut.mp4"
+                />
+              </div>
+            </header>
+
+            {/* --- 3. SHOP SECTION (Carousel) --- */}
+            <section
+              id="shop-section"
+              className={`w-full min-h-screen flex flex-col justify-center py-12 transition-colors duration-500 ${
+                isInverted ? "bg-black" : "bg-white"
+              }`}
+            >
+              {/* IMAGE CAROUSEL */}
+              <div
+                ref={carouselRef}
+                className="w-full overflow-x-auto no-scrollbar flex snap-x snap-mandatory gap-4 px-4 md:px-12 mb-8"
+              >
+                {[...Array(7)].map((_, i) => {
+                  const imageNumber = i + 1;
+                  const imagePath = `./${activeProduct.folderName}/${imageNumber}.webp`;
+
+                  return (
+                    // UPDATED: aspect-square (1:1)
+                    <div
+                      key={i}
+                      className="flex-shrink-0 snap-center h-[50vh] md:h-[60vh] aspect-square relative bg-neutral-100 overflow-hidden"
+                    >
+                      <img
+                        src={imagePath}
+                        alt={`${activeProduct.name} ${imageNumber}`}
+                        className={`w-full h-full object-cover transition-transform duration-700 ${
+                          isInverted ? "invert" : ""
+                        }`}
+                        onError={(e) => {
+                          e.target.style.display = "none";
+                          e.target.parentElement.classList.add(
+                            "flex",
+                            "items-center",
+                            "justify-center",
+                            "border",
+                            "border-current"
+                          );
+                          e.target.parentElement.innerText = `IMG ${imageNumber}`;
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* CONTROLS (CSS Grid Layout) */}
+              <div className="w-full px-4 md:px-12">
+                {/* UPDATED: grid grid-cols-3, removed borders */}
+                <div className="grid grid-cols-3 items-center pt-4">
+                  {/* LEFT: 001 */}
+                  <div className="justify-self-start">
+                    <button
+                      onClick={() => setActiveProductId("001")}
+                      className={`hover:underline underline-offset-4
+                                            ${
+                                              activeProductId === "001"
+                                                ? "font-bold underline"
+                                                : "opacity-50"
+                                            }`}
+                    >
+                      001
+                    </button>
+                  </div>
+
+                  {/* MIDDLE: INFO & BUY (Flowing in grid, no box) */}
+                  <div className="justify-self-center flex flex-col items-center gap-2">
+                    <span className="opacity-50 mb-1">
+                      {activeProduct.name}
+                    </span>
+
+                    <div className="flex items-center gap-4">
+                      {/* Size Selector - Clean Text Only */}
+                      <div className="relative">
+                        <select
+                          value={selectedSize}
+                          onChange={(e) =>
+                            setSelectedSize(Number(e.target.value))
+                          }
+                          className={`appearance-none bg-transparent py-2 text-center focus:outline-none cursor-pointer underline underline-offset-4
+                                                    ${
+                                                      isInverted
+                                                        ? "text-white"
+                                                        : "text-black"
+                                                    }`}
+                        >
+                          {SIZES.map((s) => (
+                            <option key={s} value={s} className="text-black">
+                              SIZE {s}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Buy Button - Clean Text Only */}
+                      <button
+                        onClick={handleBuy}
+                        className={`py-2 hover:opacity-50 transition-opacity font-bold tracking-widest`}
+                      >
+                        KAUFEN
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* RIGHT: 002 */}
+                  <div className="justify-self-end">
+                    <button
+                      onClick={() => setActiveProductId("002")}
+                      className={`hover:underline underline-offset-4
+                                            ${
+                                              activeProductId === "002"
+                                                ? "font-bold underline"
+                                                : "opacity-50"
+                                            }`}
+                    >
+                      002
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        );
+      };
+
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
+    </script>
+  </body>
+</html>
