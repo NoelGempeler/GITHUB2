@@ -70,7 +70,7 @@
         }
       }
       .animate-marquee {
-        animation: marquee 60s linear infinite;
+        animation: marquee 30s linear infinite;
         width: fit-content;
       }
 
@@ -118,7 +118,6 @@
         },
       ];
 
-      // UPDATED: Added 66 to the sizes array
       const SIZES = [48, 50, 52, 54, 56, 58, 60, 62, 64, 66];
 
       // ---------------------------------------------------------
@@ -171,7 +170,6 @@
         return (
           <div className="w-full min-h-screen flex flex-col items-center justify-center p-8 text-center bg-white gap-8 cursor-default">
             <div className="max-w-md flex flex-col gap-6">
-              {/* UPDATED: underline-offset-[5px] */}
               <h2 className="text-sm underline underline-offset-[5px] decoration-1">
                 payment update
               </h2>
@@ -212,7 +210,6 @@
 
             <button
               onClick={onBack}
-              // UPDATED: underline-offset-[5px]
               className="fixed top-8 left-8 hover:underline decoration-1 underline-offset-[5px]"
             >
               &lt; back
@@ -226,12 +223,11 @@
       // ---------------------------------------------------------
       const ProductColumn = ({ product, setCursorText, onBuyClick }) => {
         const [currentImageIndex, setCurrentImageIndex] = React.useState(1);
-        // UPDATED: Default size is now null (choose sizing)
         const [selectedSize, setSelectedSize] = React.useState(null);
-        const [isSizeSelectorOpen, setIsSizeSelectorOpen] =
-          React.useState(false);
 
-        const totalImages = 10;
+        // UPDATED: Set a realistic max number. If you have 7 images, this is perfect.
+        // If you have fewer, the error handler will seamlessly reset to 1.
+        const totalImages = 7;
 
         const handleMouseMove = (e) => {
           const rect = e.currentTarget.getBoundingClientRect();
@@ -259,19 +255,20 @@
         };
 
         const handleImageError = (e) => {
-          e.target.style.opacity = "0";
+          // UPDATED ERROR LOGIC:
+          // If an image is missing, assume we reached the end of the sequence (or start).
+          // Instead of skipping forward blindly, we reset to 1.
+          // This eliminates white flashes by instantly showing the first image.
+          e.target.style.display = "none"; // Temporarily hide broken image
           setTimeout(() => {
-            setCurrentImageIndex((prev) =>
-              prev >= totalImages ? 1 : prev + 1
-            );
-            e.target.style.opacity = "1";
-          }, 50);
+            setCurrentImageIndex(1);
+            e.target.style.display = "block";
+          }, 0);
         };
 
         const handleBuy = () => {
           if (!selectedSize) {
             alert("Please select a size first.");
-            setIsSizeSelectorOpen(true);
             return;
           }
           onBuyClick(product, selectedSize);
@@ -290,6 +287,7 @@
               className="hidden md:block w-full aspect-square relative bg-neutral-100 overflow-hidden select-none cursor-none-force"
             >
               <img
+                key={currentImageIndex} // Force re-render on change
                 src={imagePath}
                 alt={`${product.name} ${currentImageIndex}`}
                 className="w-full h-full object-cover relative z-0"
@@ -300,6 +298,7 @@
             {/* IMAGE AREA - MOBILE (Swipeable Slider) */}
             <div className="md:hidden w-full aspect-square relative bg-neutral-100 overflow-hidden">
               <div className="w-full h-full flex overflow-x-auto snap-x snap-mandatory no-scrollbar">
+                {/* Render up to 7 images for mobile slider */}
                 {[...Array(totalImages)].map((_, i) => (
                   <img
                     key={i}
@@ -317,40 +316,26 @@
               <h2>{product.id}</h2>
 
               <div className="flex flex-col items-center gap-2">
-                {/* SIZE SELECTOR */}
+                {/* SIZE SELECTOR - Displaying all sizes immediately */}
                 <div className="relative h-12 flex items-center justify-center">
-                  {isSizeSelectorOpen ? (
-                    <div className="flex items-center gap-4 overflow-x-auto no-scrollbar max-w-[200px] whitespace-nowrap">
-                      {SIZES.map((s) => (
-                        <button
-                          key={s}
-                          onClick={() => {
-                            setSelectedSize(s);
-                            setIsSizeSelectorOpen(false);
-                          }}
-                          // UPDATED: underline-offset-[5px]
-                          className={`hover:underline decoration-1 underline-offset-[5px] transition-all ${
-                            selectedSize === s ? "underline" : "opacity-60"
-                          }`}
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setIsSizeSelectorOpen(true)}
-                      className="hover:opacity-50 transition-opacity border-b border-transparent hover:border-black"
-                    >
-                      {selectedSize ? `size ${selectedSize}` : "choose sizing"}
-                    </button>
-                  )}
+                  <div className="flex items-center gap-4 overflow-x-auto no-scrollbar max-w-[200px] whitespace-nowrap">
+                    {SIZES.map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setSelectedSize(s)}
+                        className={`hover:underline decoration-1 underline-offset-[5px] transition-all ${
+                          selectedSize === s ? "underline" : "opacity-60"
+                        }`}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* BUY BUTTON */}
                 <button
                   onClick={handleBuy}
-                  // UPDATED: underline-offset-[5px]
                   className="px-6 py-2 mt-2 hover:underline decoration-1 underline-offset-[5px] transition-all"
                 >
                   kaufen
