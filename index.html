@@ -70,7 +70,7 @@
         }
       }
       .animate-marquee {
-        animation: marquee 30s linear infinite;
+        animation: marquee 60s linear infinite;
         width: fit-content;
       }
 
@@ -106,17 +106,20 @@
           id: "001",
           name: "The Ether Loop",
           folderName: "ring1",
+          // PASTE YOUR STRIPE LINK FOR RING 001 HERE
           paymentLink: "https://buy.stripe.com/PLACEHOLDER_LINK_001",
         },
         {
           id: "002",
           name: "The Void Band",
           folderName: "ring2",
+          // PASTE YOUR STRIPE LINK FOR RING 002 HERE
           paymentLink: "https://buy.stripe.com/PLACEHOLDER_LINK_002",
         },
       ];
 
-      const SIZES = [48, 50, 52, 54, 56, 58, 60, 62, 64];
+      // UPDATED: Added 66 to the sizes array
+      const SIZES = [48, 50, 52, 54, 56, 58, 60, 62, 64, 66];
 
       // ---------------------------------------------------------
       // CUSTOM CURSOR COMPONENT
@@ -168,7 +171,8 @@
         return (
           <div className="w-full min-h-screen flex flex-col items-center justify-center p-8 text-center bg-white gap-8 cursor-default">
             <div className="max-w-md flex flex-col gap-6">
-              <h2 className="text-sm underline underline-offset-4 decoration-1">
+              {/* UPDATED: underline-offset-[5px] */}
+              <h2 className="text-sm underline underline-offset-[5px] decoration-1">
                 payment update
               </h2>
 
@@ -208,7 +212,8 @@
 
             <button
               onClick={onBack}
-              className="fixed top-8 left-8 hover:underline decoration-1 underline-offset-4"
+              // UPDATED: underline-offset-[5px]
+              className="fixed top-8 left-8 hover:underline decoration-1 underline-offset-[5px]"
             >
               &lt; back
             </button>
@@ -221,7 +226,8 @@
       // ---------------------------------------------------------
       const ProductColumn = ({ product, setCursorText, onBuyClick }) => {
         const [currentImageIndex, setCurrentImageIndex] = React.useState(1);
-        const [selectedSize, setSelectedSize] = React.useState(54);
+        // UPDATED: Default size is now null (choose sizing)
+        const [selectedSize, setSelectedSize] = React.useState(null);
         const [isSizeSelectorOpen, setIsSizeSelectorOpen] =
           React.useState(false);
 
@@ -263,6 +269,11 @@
         };
 
         const handleBuy = () => {
+          if (!selectedSize) {
+            alert("Please select a size first.");
+            setIsSizeSelectorOpen(true);
+            return;
+          }
           onBuyClick(product, selectedSize);
         };
 
@@ -317,7 +328,8 @@
                             setSelectedSize(s);
                             setIsSizeSelectorOpen(false);
                           }}
-                          className={`hover:underline decoration-1 underline-offset-[7px] transition-all ${
+                          // UPDATED: underline-offset-[5px]
+                          className={`hover:underline decoration-1 underline-offset-[5px] transition-all ${
                             selectedSize === s ? "underline" : "opacity-60"
                           }`}
                         >
@@ -330,7 +342,7 @@
                       onClick={() => setIsSizeSelectorOpen(true)}
                       className="hover:opacity-50 transition-opacity border-b border-transparent hover:border-black"
                     >
-                      size {selectedSize}
+                      {selectedSize ? `size ${selectedSize}` : "choose sizing"}
                     </button>
                   )}
                 </div>
@@ -338,7 +350,8 @@
                 {/* BUY BUTTON */}
                 <button
                   onClick={handleBuy}
-                  className="px-6 py-2 mt-2 hover:underline decoration-1 underline-offset-[7px] transition-all"
+                  // UPDATED: underline-offset-[5px]
+                  className="px-6 py-2 mt-2 hover:underline decoration-1 underline-offset-[5px] transition-all"
                 >
                   kaufen
                 </button>
