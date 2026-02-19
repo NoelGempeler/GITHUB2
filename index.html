@@ -24,18 +24,15 @@
     <style>
       /* 1. FONT SETUP */
       @font-face {
-        font-family: "Programme Regular";
-        src:
-          local("Programme"), local("Programme Regular"),
-          local("Programme-Regular");
+        font-family: "SF Pro ";
+        src: local("SF Pro "), local("SF Pro "), local("PSF Pro ");
         font-weight: normal;
         font-style: normal;
       }
 
       /* Global Font Config */
       body {
-        font-family:
-          "Programme Regular", "Programme", "Courier New", Courier, monospace;
+        font-family: "SF Pro ", "SF Pro ", "Courier New", Courier, monospace;
         overscroll-behavior: none; /* Prevents bounce effect on Mac/iOS */
       }
 
@@ -145,7 +142,7 @@
             className="custom-cursor-element fixed top-0 left-0 pointer-events-none z-[9999] mix-blend-difference text-white whitespace-nowrap text-2xl"
             style={{
               willChange: "transform",
-              fontFamily: "'Programme Regular', 'Programme', monospace",
+              fontFamily: "'SF Pro ', 'SF Pro ', monospace",
             }}
           >
             {text}
