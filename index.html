@@ -5,10 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>anell</title>
 
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              anell: ['"CirrusCumulus"', "Courier New", "Courier", "monospace"],
+            },
+            fontSize: {
+              anell: "4rem",
+            },
+          },
+        },
+      };
+    </script>
 
-    <!-- React & ReactDOM (Production versions for stability) -->
     <script
       crossorigin
       src="https://unpkg.com/react@18/umd/react.production.min.js"
@@ -17,49 +29,36 @@
       crossorigin
       src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
     ></script>
-
-    <!-- Babel Standalone -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/html-to-image@1.11.11/dist/html-to-image.js"></script>
 
     <style>
-      /* 1. FONT SETUP */
       @font-face {
-        font-family: "SF Pro ";
-        src: local("SF Pro "), local("SF Pro "), local("PSF Pro ");
+        font-family: "CirrusCumulus";
+        src: url("./fonts/CirrusCumulus.woff") format("woff");
         font-weight: normal;
         font-style: normal;
-      }
-
-      /* Global Font Config */
-      body {
-        font-family: "SF Pro ", "SF Pro ", "Courier New", Courier, monospace;
-        overscroll-behavior: none; /* Prevents bounce effect on Mac/iOS */
+        font-display: swap;
       }
 
       html {
         scroll-behavior: smooth;
+        overflow-x: clip;
+      }
+
+      body {
+        font-family: "CirrusCumulus", "Courier New", Courier, monospace;
+        font-size: 4rem;
+        line-height: 1;
+        overscroll-behavior: none;
+        overflow-x: clip;
       }
 
       ::selection {
-        background-color: #f43f5e;
+        background-color: #ff2ecb;
         color: white;
       }
 
-      /* Hide scrollbar */
-      .no-scrollbar::-webkit-scrollbar {
-        display: none;
-      }
-      .no-scrollbar {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-      }
-
-      /* Disable default cursor everywhere we use the custom one */
-      .cursor-none-force {
-        cursor: none !important;
-      }
-
-      /* Marquee Animation */
       @keyframes marquee {
         0% {
           transform: translateX(0);
@@ -68,380 +67,1531 @@
           transform: translateX(-50%);
         }
       }
+
       .animate-marquee {
-        animation: marquee 60s linear infinite;
         width: fit-content;
+        will-change: transform;
       }
 
-      /* --- MOBILE / TOUCH DEVICE ADJUSTMENTS --- */
-      @media (hover: none) and (pointer: coarse) {
-        body {
-          cursor: auto !important;
-        }
-        .cursor-none-force {
-          cursor: auto !important;
-        }
-        .custom-cursor-element {
-          display: none !important;
-        }
+      .neon-hover {
+        transition: color 0.2s ease;
+      }
+
+      .neon-hover:hover:not(:disabled) {
+        color: #ff2ecb;
       }
     </style>
   </head>
 
-  <body
-    class="bg-white text-black transition-colors duration-700 lowercase text-xs font-normal leading-tight cursor-none antialiased"
-  >
+  <body class="bg-white text-black antialiased lowercase">
     <div id="root"></div>
 
-    <!-- FIXED: Removed data-type="module" and added error handling -->
     <script type="text/babel">
-      // ---------------------------------------------------------
-      // DATA CONFIGURATION
-      // ---------------------------------------------------------
-
       const TWINT_NUMBER = "+41 78 985 88 88";
 
       const PRODUCTS = [
-        {
-          id: "001",
-          name: "The Ether Loop",
-          folderName: "ring1",
-          paymentLink: "https://buy.stripe.com/PLACEHOLDER_LINK_001",
-        },
-        {
-          id: "002",
-          name: "The Void Band",
-          folderName: "ring2",
-          paymentLink: "https://buy.stripe.com/PLACEHOLDER_LINK_002",
-        },
+        { id: 1, src: "./gallery/01.png", alt: "bag sealed", name: "001", label: "placeholder" },
+        { id: 2, src: "./gallery/02.png", alt: "hands with silver", name: "002", label: "placeholder" },
+        { id: 3, src: "./gallery/03.png", alt: "bag soft", name: "003", label: "placeholder" },
+        { id: 4, src: "./gallery/04.png", alt: "melted form", name: "004", label: "placeholder" },
+        { id: 5, src: "./gallery/05.png", alt: "zubrowka shards", name: "005", label: "placeholder" },
+        { id: 6, src: "./gallery/06.png", alt: "organic field", name: "006", label: "placeholder" },
+        { id: 7, src: "./gallery/07.png", alt: "zubrowka metal", name: "007", label: "placeholder" },
+        { id: 8, src: "./gallery/08.png", alt: "melted hands", name: "008", label: "placeholder" },
+        { id: 9, src: "./gallery/09.png", alt: "cupped hands", name: "009", label: "placeholder" },
+      ];
+
+      const ROWS = [
+        PRODUCTS.slice(0, 3),
+        PRODUCTS.slice(3, 6),
+        PRODUCTS.slice(6, 9),
       ];
 
       const SIZES = [48, 50, 52, 54, 56, 58, 60, 62, 64, 66];
 
       // ---------------------------------------------------------
-      // CUSTOM CURSOR COMPONENT
+      // Page transitions
+      //   shatter — triangles fall off screen
+      //   crumble — viewport crumples into a paper ball at click
+      //   fall    — whole sheet tips toward you
+      //   drape   — static fold panels open outward
+      //   curtain — physics cloth curtains on canvas
+      //   flip    — horizontal card flip; back is destination, void is black
       // ---------------------------------------------------------
-      const CustomCursor = ({ text, visible }) => {
-        const cursorRef = React.useRef(null);
+      const TRANSITION_TYPES = [
+        "shatter",
+        "crumble",
+        "fall",
+        "drape",
+        "curtain",
+        "flip",
+      ];
+
+      function easeInCubic(t) {
+        return t * t * t;
+      }
+
+      function easeOutCubic(t) {
+        return 1 - Math.pow(1 - t, 3);
+      }
+
+      function easeInOutCubic(t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      }
+
+      function nextFrame() {
+        return new Promise((r) =>
+          requestAnimationFrame(() => requestAnimationFrame(r)),
+        );
+      }
+
+      function pinCanvas(canvas, w, h) {
+        canvas.width = w;
+        canvas.height = h;
+        canvas.style.cssText = [
+          "position:fixed",
+          "top:0",
+          "left:0",
+          `width:${w}px`,
+          `height:${h}px`,
+          "z-index:9999",
+          "pointer-events:none",
+          "display:block",
+          "margin:0",
+          "padding:0",
+          "border:0",
+        ].join(";");
+      }
+
+      async function screenshotViewport() {
+        const w = document.documentElement.clientWidth;
+        const fullH = document.documentElement.clientHeight;
+        const marquee = document.getElementById("site-marquee");
+        const marqueeH = marquee ? Math.ceil(marquee.getBoundingClientRect().height) : 0;
+        // Capture only the content viewport — slider stays its own layer
+        const h = Math.max(1, fullH - marqueeH);
+        const scrollX = window.scrollX;
+        const scrollY = window.scrollY;
+
+        const shot = await htmlToImage.toCanvas(document.body, {
+          pixelRatio: 1,
+          width: w,
+          height: h,
+          canvasWidth: w,
+          canvasHeight: h,
+          backgroundColor: "#ffffff",
+          style: {
+            transform: `translate(${-scrollX}px, ${-scrollY}px)`,
+            transformOrigin: "top left",
+          },
+          filter: (node) => {
+            if (!node || typeof node.id !== "string") return true;
+            return (
+              node.id !== "shatter-layer" &&
+              node.id !== "shatter-freeze" &&
+              node.id !== "shatter-overlay" &&
+              node.id !== "site-marquee"
+            );
+          },
+        });
+
+        const out = document.createElement("canvas");
+        out.width = w;
+        out.height = h;
+        const ctx = out.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(shot, 0, 0);
+        return out;
+      }
+
+      function buildTriangles(w, h, cols, rows, jitter = 0.9) {
+        const grid = [];
+        for (let y = 0; y <= rows; y++) {
+          const line = [];
+          for (let x = 0; x <= cols; x++) {
+            let px = (x / cols) * w;
+            let py = (y / rows) * h;
+            const edge = x === 0 || y === 0 || x === cols || y === rows;
+            if (!edge) {
+              px += (Math.random() - 0.5) * (w / cols) * jitter;
+              py += (Math.random() - 0.5) * (h / rows) * jitter;
+            }
+            line.push([px, py]);
+          }
+          grid.push(line);
+        }
+
+        const tris = [];
+        for (let y = 0; y < rows; y++) {
+          for (let x = 0; x < cols; x++) {
+            const a = grid[y][x];
+            const b = grid[y][x + 1];
+            const c = grid[y + 1][x];
+            const d = grid[y + 1][x + 1];
+            if (Math.random() > 0.5) {
+              tris.push([a, b, d], [a, d, c]);
+            } else {
+              tris.push([a, b, c], [b, d, c]);
+            }
+          }
+        }
+        return tris;
+      }
+
+      function drawPiece(ctx, sourceCanvas, piece, x, y, rot, scale) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rot);
+        ctx.scale(scale, scale);
+        ctx.beginPath();
+        ctx.moveTo(piece.local[0][0], piece.local[0][1]);
+        ctx.lineTo(piece.local[1][0], piece.local[1][1]);
+        ctx.lineTo(piece.local[2][0], piece.local[2][1]);
+        ctx.closePath();
+        ctx.clip();
+        ctx.drawImage(sourceCanvas, -piece.cx, -piece.cy);
+        ctx.restore();
+      }
+
+      // --- shatter: big triangles fall off the bottom ---
+      function runShatter(sourceCanvas, _click, onComplete) {
+        const prev = document.getElementById("shatter-layer");
+        if (prev) prev.remove();
+
+        const w = sourceCanvas.width;
+        const h = sourceCanvas.height;
+        const canvas = document.createElement("canvas");
+        canvas.id = "shatter-layer";
+        pinCanvas(canvas, w, h);
+        document.body.appendChild(canvas);
+        const ctx = canvas.getContext("2d");
+
+        const pieces = buildTriangles(w, h, 5, 3).map((tri) => {
+          const [a, b, c] = tri;
+          const cx = (a[0] + b[0] + c[0]) / 3;
+          const cy = (a[1] + b[1] + c[1]) / 3;
+          const side = cx < w / 2 ? -1 : 1;
+          return {
+            cx,
+            cy,
+            local: [
+              [a[0] - cx, a[1] - cy],
+              [b[0] - cx, b[1] - cy],
+              [c[0] - cx, c[1] - cy],
+            ],
+            tx: side * (80 + Math.random() * 280) + (Math.random() - 0.5) * 160,
+            ty: h - cy + 280 + Math.random() * 520,
+            rot: (Math.random() - 0.5) * Math.PI * 2.4,
+            delay: Math.random() * 0.2,
+          };
+        });
+
+        const hold = 0.06;
+        const duration = 1.55;
+        const start = performance.now();
+        ctx.drawImage(sourceCanvas, 0, 0);
+
+        const tick = (now) => {
+          const t = (now - start) / 1000;
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.clearRect(0, 0, w, h);
+
+          if (t < hold) {
+            ctx.drawImage(sourceCanvas, 0, 0);
+            requestAnimationFrame(tick);
+            return;
+          }
+
+          pieces.forEach((piece) => {
+            const local = Math.max(0, t - hold - piece.delay);
+            const e = easeInCubic(Math.min(1, local / duration));
+            drawPiece(
+              ctx,
+              sourceCanvas,
+              piece,
+              piece.cx + piece.tx * e,
+              piece.cy + piece.ty * e,
+              piece.rot * e,
+              1,
+            );
+          });
+
+          if (t < hold + duration + 0.15) {
+            requestAnimationFrame(tick);
+          } else {
+            canvas.remove();
+            onComplete();
+          }
+        };
+
+        requestAnimationFrame(tick);
+      }
+
+      // --- crumble: page sucks into a paper ball at the click ---
+      function runCrumble(sourceCanvas, click, onComplete) {
+        const prev = document.getElementById("shatter-layer");
+        if (prev) prev.remove();
+
+        const w = sourceCanvas.width;
+        const h = sourceCanvas.height;
+        const canvas = document.createElement("canvas");
+        canvas.id = "shatter-layer";
+        pinCanvas(canvas, w, h);
+        document.body.appendChild(canvas);
+        const ctx = canvas.getContext("2d");
+
+        const ox =
+          click && Number.isFinite(click.x)
+            ? Math.min(w, Math.max(0, click.x))
+            : w / 2;
+        const oy =
+          click && Number.isFinite(click.y)
+            ? Math.min(h, Math.max(0, click.y))
+            : h / 2;
+
+        // Smaller scraps so it reads as crumpled paper
+        const pieces = buildTriangles(w, h, 14, 9, 0.75).map((tri) => {
+          const [a, b, c] = tri;
+          const cx = (a[0] + b[0] + c[0]) / 3;
+          const cy = (a[1] + b[1] + c[1]) / 3;
+          const dx = cx - ox;
+          const dy = cy - oy;
+          const dist = Math.hypot(dx, dy) || 1;
+          const angle = Math.atan2(dy, dx);
+          // Land in a tight ball around the click, with a swirl
+          const ballR = 10 + Math.random() * 28;
+          const swirl = angle + (1.2 + Math.random() * 2.4);
+          const endX = ox + Math.cos(swirl) * ballR * (0.3 + Math.random());
+          const endY = oy + Math.sin(swirl) * ballR * (0.3 + Math.random());
+
+          return {
+            cx,
+            cy,
+            local: [
+              [a[0] - cx, a[1] - cy],
+              [b[0] - cx, b[1] - cy],
+              [c[0] - cx, c[1] - cy],
+            ],
+            tx: endX - cx,
+            ty: endY - cy,
+            rot: (Math.random() - 0.5) * Math.PI * 5,
+            scaleEnd: 0.08 + Math.random() * 0.14,
+            // Outer scraps start moving first (paper peeling in)
+            delay: (dist / Math.hypot(w, h)) * 0.35 + Math.random() * 0.08,
+          };
+        });
+
+        const hold = 0.05;
+        const suckDuration = 1.15;
+        const ballDuration = 0.45;
+        const start = performance.now();
+        ctx.drawImage(sourceCanvas, 0, 0);
+
+        const tick = (now) => {
+          const t = (now - start) / 1000;
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.clearRect(0, 0, w, h);
+
+          if (t < hold) {
+            ctx.drawImage(sourceCanvas, 0, 0);
+            requestAnimationFrame(tick);
+            return;
+          }
+
+          const suckT = t - hold;
+          // After scraps form a ball, the whole ball shrinks away
+          const ballT = Math.max(0, suckT - suckDuration);
+          const ballScale =
+            ballT <= 0
+              ? 1
+              : Math.max(0, 1 - easeInCubic(Math.min(1, ballT / ballDuration)));
+
+          // Draw farthest-from-center first so ball sits on top
+          const sorted = pieces
+            .map((piece) => {
+              const local = Math.max(0, suckT - piece.delay);
+              const e = easeInOutCubic(Math.min(1, local / suckDuration));
+              return { piece, e };
+            })
+            .sort((a, b) => a.e - b.e);
+
+          ctx.save();
+          if (ballScale < 1) {
+            ctx.translate(ox, oy);
+            ctx.scale(ballScale, ballScale);
+            ctx.rotate(ballT * 6);
+            ctx.translate(-ox, -oy);
+          }
+
+          sorted.forEach(({ piece, e }) => {
+            const scale = 1 - (1 - piece.scaleEnd) * e;
+            drawPiece(
+              ctx,
+              sourceCanvas,
+              piece,
+              piece.cx + piece.tx * e,
+              piece.cy + piece.ty * e,
+              piece.rot * e,
+              scale,
+            );
+          });
+          ctx.restore();
+
+          if (t < hold + suckDuration + ballDuration + 0.05) {
+            requestAnimationFrame(tick);
+          } else {
+            canvas.remove();
+            onComplete();
+          }
+        };
+
+        requestAnimationFrame(tick);
+      }
+
+      // --- fall: one solid sheet tips over (hinged at bottom, toward you) ---
+      function runFall(sourceCanvas, _click, onComplete) {
+        const prev = document.getElementById("shatter-layer");
+        if (prev) prev.remove();
+
+        const w = sourceCanvas.width;
+        const h = sourceCanvas.height;
+
+        const stage = document.createElement("div");
+        stage.id = "shatter-layer";
+        stage.style.cssText = [
+          "position:fixed",
+          "top:0",
+          "left:0",
+          `width:${w}px`,
+          `height:${h}px`,
+          "z-index:9999",
+          "pointer-events:none",
+          "perspective:1600px",
+          "perspective-origin:50% 100%",
+          "overflow:hidden",
+          "background:transparent",
+        ].join(";");
+
+        // Sheet group gets the 3D transform so canvas + shade move together
+        const sheet = document.createElement("div");
+        sheet.style.cssText = [
+          "position:relative",
+          `width:${w}px`,
+          `height:${h}px`,
+          "transform-origin:50% 100%",
+          "transform:rotateX(0deg)",
+          "transform-style:preserve-3d",
+          "will-change:transform",
+          "backface-visibility:hidden",
+        ].join(";");
+
+        const face = document.createElement("canvas");
+        face.width = w;
+        face.height = h;
+        face.getContext("2d").drawImage(sourceCanvas, 0, 0);
+        face.style.cssText = [
+          `width:${w}px`,
+          `height:${h}px`,
+          "display:block",
+        ].join(";");
+
+        // Front-light shade: darkens as the sheet tips (top gets more shadow)
+        const shade = document.createElement("div");
+        shade.style.cssText = [
+          "position:absolute",
+          "inset:0",
+          "pointer-events:none",
+          "background:linear-gradient(to top, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 100%)",
+          "opacity:0",
+          "mix-blend-mode:multiply",
+        ].join(";");
+
+        // Soft contact shadow under/behind the tipping sheet
+        const contact = document.createElement("div");
+        contact.style.cssText = [
+          "position:absolute",
+          "left:0",
+          "right:0",
+          "bottom:0",
+          "height:40%",
+          "pointer-events:none",
+          "background:linear-gradient(to top, rgba(0,0,0,0.45), transparent)",
+          "opacity:0",
+          "transform:translateZ(-1px)",
+        ].join(";");
+
+        sheet.appendChild(face);
+        sheet.appendChild(shade);
+        sheet.appendChild(contact);
+        stage.appendChild(sheet);
+        document.body.appendChild(stage);
+
+        const hold = 0.04;
+        const duration = 1.15;
+        const start = performance.now();
+
+        const tick = (now) => {
+          const t = (now - start) / 1000;
+          if (t < hold) {
+            requestAnimationFrame(tick);
+            return;
+          }
+
+          const e = easeInCubic(Math.min(1, (t - hold) / duration));
+          const angle = e * 90;
+          sheet.style.transform = `rotateX(${angle}deg)`;
+          // Shade ramps up as it leaves the "lit" facing-camera pose
+          shade.style.opacity = String(Math.min(1, e * 1.25));
+          contact.style.opacity = String(e * 0.85);
+
+          if (t < hold + duration) {
+            requestAnimationFrame(tick);
+          } else {
+            stage.remove();
+            onComplete();
+          }
+        };
+
+        requestAnimationFrame(tick);
+      }
+
+      // --- drape: left/right panels with static folds, open outward ---
+      function runDrape(sourceCanvas, _click, onComplete) {
+        const prev = document.getElementById("shatter-layer");
+        if (prev) prev.remove();
+
+        const w = sourceCanvas.width;
+        const h = sourceCanvas.height;
+        const mid = w / 2;
+        const foldsPerSide = 12;
+
+        const stage = document.createElement("div");
+        stage.id = "shatter-layer";
+        stage.style.cssText = [
+          "position:fixed",
+          "top:0",
+          "left:0",
+          `width:${w}px`,
+          `height:${h}px`,
+          "z-index:9999",
+          "pointer-events:none",
+          "perspective:1800px",
+          "perspective-origin:50% 50%",
+          "overflow:hidden",
+          "background:transparent",
+        ].join(";");
+
+        function makeSide(side) {
+          // side: "left" | "right"
+          const panel = document.createElement("div");
+          panel.style.cssText = [
+            "position:absolute",
+            "top:0",
+            side === "left" ? "left:0" : "right:0",
+            `width:${mid}px`,
+            `height:${h}px`,
+            "display:flex",
+            "transform-style:preserve-3d",
+            "will-change:transform",
+          ].join(";");
+
+          const foldW = mid / foldsPerSide;
+          const strips = [];
+
+          for (let i = 0; i < foldsPerSide; i++) {
+            // Left panel: folds from outer→center (0 at left edge)
+            // Right panel: folds from center→outer visually; index 0 at center
+            const srcX =
+              side === "left" ? i * foldW : mid + i * foldW;
+
+            const strip = document.createElement("canvas");
+            strip.width = Math.ceil(foldW);
+            strip.height = h;
+            const ctx = strip.getContext("2d");
+            ctx.drawImage(
+              sourceCanvas,
+              srcX,
+              0,
+              foldW,
+              h,
+              0,
+              0,
+              strip.width,
+              h,
+            );
+
+            // Pleat shade — alternate dark/light for fold valleys & peaks
+            const shade = document.createElement("div");
+            const valley = i % 2 === 0;
+            shade.style.cssText = [
+              "position:absolute",
+              "inset:0",
+              "pointer-events:none",
+              valley
+                ? "background:linear-gradient(90deg, rgba(0,0,0,0.28), rgba(0,0,0,0.05) 45%, rgba(255,255,255,0.08))"
+                : "background:linear-gradient(90deg, rgba(255,255,255,0.12), rgba(0,0,0,0.18))",
+            ].join(";");
+
+            const wrap = document.createElement("div");
+            wrap.style.cssText = [
+              "position:relative",
+              `width:${foldW}px`,
+              `height:${h}px`,
+              "flex:0 0 auto",
+              "transform-style:preserve-3d",
+              "transform-origin:50% 50%",
+              "will-change:transform",
+              "overflow:hidden",
+            ].join(";");
+
+            strip.style.cssText = "display:block;width:100%;height:100%;";
+            wrap.appendChild(strip);
+            wrap.appendChild(shade);
+            panel.appendChild(wrap);
+
+            // Distance from the center split (0 at seam, 1 at outer edge)
+            const fromCenter =
+              side === "left"
+                ? (foldsPerSide - 1 - i) / (foldsPerSide - 1)
+                : i / (foldsPerSide - 1);
+
+            strips.push({
+              wrap,
+              side,
+              fromCenter,
+              // Accordion fold angle direction
+              foldSign: valley ? 1 : -1,
+            });
+          }
+
+          return { panel, strips };
+        }
+
+        const left = makeSide("left");
+        const right = makeSide("right");
+        stage.appendChild(left.panel);
+        stage.appendChild(right.panel);
+        document.body.appendChild(stage);
+
+        const hold = 0.06;
+        const duration = 1.55;
+        const start = performance.now();
+
+        const tick = (now) => {
+          const t = (now - start) / 1000;
+          if (t < hold) {
+            requestAnimationFrame(tick);
+            return;
+          }
+
+          const e = easeInOutCubic(Math.min(1, (t - hold) / duration));
+
+          // Panels slide fully off their sides
+          const travel = mid + 40;
+          left.panel.style.transform = `translateX(${-travel * e}px)`;
+          right.panel.style.transform = `translateX(${travel * e}px)`;
+
+          // Folds: gather near the leading (outer) edge as curtains open,
+          // with a soft wave from the center seam outward
+          [...left.strips, ...right.strips].forEach((strip) => {
+            const wave = Math.sin(strip.fromCenter * Math.PI);
+            // Early in the motion folds deepen, then flatten as fabric exits
+            const foldAmp =
+              Math.sin(e * Math.PI) * (22 + strip.fromCenter * 18);
+            const rotateY = strip.foldSign * foldAmp * (0.35 + wave * 0.65);
+            // Slight depth so folds read in perspective
+            const z = Math.abs(Math.sin((rotateY * Math.PI) / 180)) * -28;
+            // Outer folds lead a touch (curtain peels from the split)
+            const lead = (1 - strip.fromCenter) * 0.08;
+            const localE = Math.min(1, Math.max(0, e + lead));
+            const scaleX = 1 - localE * 0.12 * wave;
+
+            strip.wrap.style.transform = `translateZ(${z}px) rotateY(${rotateY}deg) scaleX(${scaleX})`;
+          });
+
+          if (t < hold + duration) {
+            requestAnimationFrame(tick);
+          } else {
+            stage.remove();
+            onComplete();
+          }
+        };
+
+        requestAnimationFrame(tick);
+      }
+
+      // --- curtain: real canvas cloth (Verlet) left/right, pulled open ---
+      function runCurtain(sourceCanvas, _click, onComplete) {
+        const prev = document.getElementById("shatter-layer");
+        if (prev) prev.remove();
+
+        const w = sourceCanvas.width;
+        const h = sourceCanvas.height;
+        const mid = w / 2;
+
+        const canvas = document.createElement("canvas");
+        canvas.id = "shatter-layer";
+        pinCanvas(canvas, w, h);
+        document.body.appendChild(canvas);
+        const ctx = canvas.getContext("2d");
+
+        // Texture-map one triangle of the screenshot onto screen verts
+        function drawTexturedTriangle(d0, d1, d2, s0, s1, s2, shade) {
+          const denom =
+            s0.u * (s1.v - s2.v) +
+            s1.u * (s2.v - s0.v) +
+            s2.u * (s0.v - s1.v);
+          if (Math.abs(denom) < 1e-5) return;
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(d0.x, d0.y);
+          ctx.lineTo(d1.x, d1.y);
+          ctx.lineTo(d2.x, d2.y);
+          ctx.closePath();
+          ctx.clip();
+
+          // Affine map from source (u,v) → dest (x,y)
+          const m11 =
+            (d0.x * (s1.v - s2.v) +
+              d1.x * (s2.v - s0.v) +
+              d2.x * (s0.v - s1.v)) /
+            denom;
+          const m12 =
+            (d0.x * (s2.u - s1.u) +
+              d1.x * (s0.u - s2.u) +
+              d2.x * (s1.u - s0.u)) /
+            denom;
+          const m13 =
+            (d0.x * (s1.u * s2.v - s2.u * s1.v) +
+              d1.x * (s2.u * s0.v - s0.u * s2.v) +
+              d2.x * (s0.u * s1.v - s1.u * s0.v)) /
+            denom;
+          const m21 =
+            (d0.y * (s1.v - s2.v) +
+              d1.y * (s2.v - s0.v) +
+              d2.y * (s0.v - s1.v)) /
+            denom;
+          const m22 =
+            (d0.y * (s2.u - s1.u) +
+              d1.y * (s0.u - s2.u) +
+              d2.y * (s1.u - s0.u)) /
+            denom;
+          const m23 =
+            (d0.y * (s1.u * s2.v - s2.u * s1.v) +
+              d1.y * (s2.u * s0.v - s0.u * s2.v) +
+              d2.y * (s0.u * s1.v - s1.u * s0.v)) /
+            denom;
+
+          ctx.setTransform(m11, m21, m12, m22, m13, m23);
+          ctx.drawImage(sourceCanvas, 0, 0);
+          ctx.restore();
+
+          if (shade > 0.01) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(d0.x, d0.y);
+            ctx.lineTo(d1.x, d1.y);
+            ctx.lineTo(d2.x, d2.y);
+            ctx.closePath();
+            ctx.fillStyle = `rgba(0,0,0,${Math.min(0.55, shade)})`;
+            ctx.fill();
+            ctx.restore();
+          }
+        }
+
+        function makeCloth(x0, x1) {
+          // One clean image pass + surplus fabric → normal hanging pleats
+          const cols = 18;
+          const rows = 15;
+          const panelW = x1 - x0;
+          const pleats = 6;
+          const vStep = h / (rows - 1);
+          // Horizontal rest longer than pin spacing → cloth bunches into folds
+          const restH = (panelW * 1.35) / (cols - 1);
+          const particles = [];
+
+          for (let j = 0; j < rows; j++) {
+            const depth = j / (rows - 1);
+            for (let i = 0; i < cols; i++) {
+              const t = i / (cols - 1);
+              // UV: single left→right pass over this half of the screenshot
+              const u = x0 + t * panelW;
+              const v = j * vStep;
+              // Soft vertical pleats (no backtracking — avoids duplicated viewport)
+              const pleat = Math.sin(t * pleats * Math.PI);
+              const x = x0 + t * panelW + pleat * (panelW / pleats) * 0.22 * (0.25 + 0.75 * depth);
+              const y = v;
+              particles.push({
+                x,
+                y,
+                ox: x,
+                oy: y,
+                px: x,
+                py: y,
+                pinned: j === 0,
+                u,
+                v,
+                valley: (1 - Math.abs(pleat)) * 0.5 + (pleat < 0 ? 0.35 : 0),
+              });
+            }
+          }
+
+          // Top pins evenly on the rail (compressed vs restH → folds hang)
+          for (let i = 0; i < cols; i++) {
+            const p = particles[i];
+            const t = i / (cols - 1);
+            p.x = x0 + t * panelW;
+            p.ox = p.x;
+            p.px = p.x;
+            p.y = 0;
+            p.oy = 0;
+            p.py = 0;
+          }
+
+          const idx = (i, j) => j * cols + i;
+          const springs = [];
+          for (let j = 0; j < rows; j++) {
+            for (let i = 0; i < cols; i++) {
+              if (i < cols - 1) {
+                springs.push({
+                  a: idx(i, j),
+                  b: idx(i + 1, j),
+                  len: restH,
+                });
+              }
+              if (j < rows - 1) {
+                const a = particles[idx(i, j)];
+                const b = particles[idx(i, j + 1)];
+                springs.push({
+                  a: idx(i, j),
+                  b: idx(i, j + 1),
+                  len: Math.hypot(b.ox - a.ox, b.oy - a.oy) || vStep,
+                });
+              }
+            }
+          }
+
+          return { cols, rows, particles, springs, idx, x0, x1 };
+        }
+
+        const left = makeCloth(0, mid);
+        const right = makeCloth(mid, w);
+
+        const gravity = 0.4;
+        const damp = 0.982;
+        const settleFrames = 32;
+        const openDuration = 1.7;
+        const start = performance.now();
+
+        function stepCloth(cloth, pullDir, openE) {
+          const { particles, springs } = cloth;
+
+          for (let p of particles) {
+            if (p.pinned) continue;
+            const vx = (p.x - p.px) * damp;
+            const vy = (p.y - p.py) * damp;
+            p.px = p.x;
+            p.py = p.y;
+            p.x += vx;
+            p.y += vy + gravity;
+
+            if (openE > 0) {
+              const seamness =
+                pullDir < 0
+                  ? (p.u - cloth.x0) / Math.max(1, cloth.x1 - cloth.x0)
+                  : (cloth.x1 - p.u) / Math.max(1, cloth.x1 - cloth.x0);
+              const force = (0.5 + seamness * 2.3) * openE * openE;
+              p.x += pullDir * force;
+              p.y -= openE * 0.08 * seamness;
+            }
+          }
+
+          for (let k = 0; k < 4; k++) {
+            for (let s of springs) {
+              const a = particles[s.a];
+              const b = particles[s.b];
+              const dx = b.x - a.x;
+              const dy = b.y - a.y;
+              const dist = Math.hypot(dx, dy) || 0.0001;
+              const diff = ((dist - s.len) / dist) * 0.5;
+              const offX = dx * diff;
+              const offY = dy * diff;
+              if (!a.pinned) {
+                a.x += offX;
+                a.y += offY;
+              }
+              if (!b.pinned) {
+                b.x -= offX;
+                b.y -= offY;
+              }
+            }
+          }
+
+          // Rail slides outward; pins stay evenly spaced (folds live in hanging cloth)
+          const railShift = pullDir * openE * (mid + 80);
+          for (let i = 0; i < cloth.cols; i++) {
+            const p = particles[cloth.idx(i, 0)];
+            p.x = p.ox + railShift;
+            p.y = 0;
+            p.px = p.x;
+            p.py = p.y;
+          }
+        }
+
+        function drawCloth(cloth) {
+          const { cols, rows, particles, idx } = cloth;
+          for (let j = 0; j < rows - 1; j++) {
+            for (let i = 0; i < cols - 1; i++) {
+              const p00 = particles[idx(i, j)];
+              const p10 = particles[idx(i + 1, j)];
+              const p01 = particles[idx(i, j + 1)];
+              const p11 = particles[idx(i + 1, j + 1)];
+
+              const restW = Math.hypot(p10.ox - p00.ox, p10.oy - p00.oy) || 1;
+              const nowW = Math.hypot(p10.x - p00.x, p10.y - p00.y);
+              const compress = Math.max(0, 1 - nowW / restW);
+              const shade =
+                compress * 0.45 + ((p00.valley + p10.valley) * 0.5) * 0.25;
+
+              drawTexturedTriangle(
+                { x: p00.x, y: p00.y },
+                { x: p10.x, y: p10.y },
+                { x: p11.x, y: p11.y },
+                { u: p00.u, v: p00.v },
+                { u: p10.u, v: p10.v },
+                { u: p11.u, v: p11.v },
+                shade,
+              );
+              drawTexturedTriangle(
+                { x: p00.x, y: p00.y },
+                { x: p11.x, y: p11.y },
+                { x: p01.x, y: p01.y },
+                { u: p00.u, v: p00.v },
+                { u: p11.u, v: p11.v },
+                { u: p01.u, v: p01.v },
+                shade * 0.9,
+              );
+            }
+          }
+        }
+
+        for (let i = 0; i < settleFrames; i++) {
+          stepCloth(left, -1, 0);
+          stepCloth(right, 1, 0);
+        }
+
+        const tick = (now) => {
+          const t = (now - start) / 1000;
+          const openE = easeInOutCubic(
+            Math.min(1, Math.max(0, (t - 0.15) / openDuration)),
+          );
+
+          stepCloth(left, -1, openE);
+          stepCloth(right, 1, openE);
+
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.clearRect(0, 0, w, h);
+          drawCloth(left);
+          drawCloth(right);
+
+          if (openE < 0.95) {
+            const alpha = (1 - openE) * 0.28;
+            ctx.fillStyle = `rgba(0,0,0,${alpha})`;
+            ctx.fillRect(mid - 4, 0, 8, h);
+          }
+
+          if (t < openDuration + 0.4) {
+            requestAnimationFrame(tick);
+          } else {
+            canvas.remove();
+            onComplete();
+          }
+        };
+
+        requestAnimationFrame(tick);
+      }
+
+      // --- flip: horizontal rotateY; front = old page, back = destination ---
+      function runFlip(frontShot, backShot, onComplete, existingStage) {
+        const prev = document.getElementById("shatter-layer");
+        if (prev && prev !== existingStage) prev.remove();
+
+        const w = frontShot.width;
+        const h = frontShot.height;
+
+        const stage = existingStage || document.createElement("div");
+        stage.id = "shatter-layer";
+        stage.style.cssText = [
+          "position:fixed",
+          "top:0",
+          "left:0",
+          `width:${w}px`,
+          `height:${h}px`,
+          "z-index:9999",
+          "pointer-events:none",
+          "background:#000",
+          "perspective:1600px",
+          "perspective-origin:50% 50%",
+          "overflow:hidden",
+        ].join(";");
+        if (!existingStage) document.body.appendChild(stage);
+
+        const card = stage.querySelector("[data-flip-card]") || document.createElement("div");
+        card.setAttribute("data-flip-card", "1");
+        card.style.cssText = [
+          "position:relative",
+          `width:${w}px`,
+          `height:${h}px`,
+          "transform-style:preserve-3d",
+          "transform-origin:50% 50%",
+          "will-change:transform",
+          "transform:rotateY(0deg)",
+        ].join(";");
+        if (!card.parentNode) stage.appendChild(card);
+
+        function face(shot, isBack) {
+          const c = document.createElement("canvas");
+          c.width = w;
+          c.height = h;
+          c.getContext("2d").drawImage(shot, 0, 0);
+          c.setAttribute("data-flip-face", isBack ? "back" : "front");
+          c.style.cssText = [
+            "position:absolute",
+            "inset:0",
+            `width:${w}px`,
+            `height:${h}px`,
+            "display:block",
+            "backface-visibility:hidden",
+            "-webkit-backface-visibility:hidden",
+            isBack ? "transform:rotateY(180deg)" : "transform:rotateY(0deg)",
+          ].join(";");
+          return c;
+        }
+
+        // Ensure front exists; attach back when provided
+        if (!card.querySelector('[data-flip-face="front"]')) {
+          card.appendChild(face(frontShot, false));
+        }
+        const oldBack = card.querySelector('[data-flip-face="back"]');
+        if (oldBack) oldBack.remove();
+        card.appendChild(face(backShot, true));
+
+        const hold = 0.04;
+        const duration = 1.05;
+        const start = performance.now();
+
+        const tick = (now) => {
+          const t = (now - start) / 1000;
+          if (t < hold) {
+            requestAnimationFrame(tick);
+            return;
+          }
+          const e = easeInOutCubic(Math.min(1, (t - hold) / duration));
+          card.style.transform = `rotateY(${e * 180}deg)`;
+
+          if (t < hold + duration) {
+            requestAnimationFrame(tick);
+          } else {
+            stage.remove();
+            onComplete();
+          }
+        };
+
+        requestAnimationFrame(tick);
+      }
+
+      // Mount flip stage showing ONLY the front face (seamless with freeze)
+      function mountFlipFront(frontShot) {
+        const w = frontShot.width;
+        const h = frontShot.height;
+        const stage = document.createElement("div");
+        stage.id = "shatter-layer";
+        stage.style.cssText = [
+          "position:fixed",
+          "top:0",
+          "left:0",
+          `width:${w}px`,
+          `height:${h}px`,
+          "z-index:9999",
+          "pointer-events:none",
+          "background:#000",
+          "perspective:1600px",
+          "perspective-origin:50% 50%",
+          "overflow:hidden",
+        ].join(";");
+
+        const card = document.createElement("div");
+        card.setAttribute("data-flip-card", "1");
+        card.style.cssText = [
+          "position:relative",
+          `width:${w}px`,
+          `height:${h}px`,
+          "transform-style:preserve-3d",
+          "transform-origin:50% 50%",
+          "transform:rotateY(0deg)",
+        ].join(";");
+
+        const front = document.createElement("canvas");
+        front.width = w;
+        front.height = h;
+        front.getContext("2d").drawImage(frontShot, 0, 0);
+        front.setAttribute("data-flip-face", "front");
+        front.style.cssText = [
+          "position:absolute",
+          "inset:0",
+          `width:${w}px`,
+          `height:${h}px`,
+          "display:block",
+          "backface-visibility:hidden",
+          "-webkit-backface-visibility:hidden",
+        ].join(";");
+
+        card.appendChild(front);
+        stage.appendChild(card);
+        document.body.appendChild(stage);
+        return stage;
+      }
+
+      const TRANSITION_RUNNERS = {
+        shatter: runShatter,
+        crumble: runCrumble,
+        fall: runFall,
+        drape: runDrape,
+        curtain: runCurtain,
+        flip: runFlip,
+      };
+
+      async function transitionTo({ type, click, onReveal, onDone }) {
+        // Flip needs both faces: old page + destination
+        if (type === "flip") {
+          const front = await screenshotViewport();
+
+          // 1) Freeze current page
+          const freeze = document.createElement("canvas");
+          freeze.id = "shatter-overlay";
+          pinCanvas(freeze, front.width, front.height);
+          freeze.style.zIndex = "10000";
+          freeze.getContext("2d").drawImage(front, 0, 0);
+          document.body.appendChild(freeze);
+          await nextFrame();
+
+          // 2) Swap route under the freeze
+          onReveal();
+          window.scrollTo(0, 0);
+          await nextFrame();
+          await nextFrame();
+
+          // 3) Put flip stage with FRONT still showing (no black gap)
+          const stage = mountFlipFront(front);
+          freeze.remove();
+          await nextFrame();
+
+          // 4) Capture destination while front face still covers the screen
+          let back;
+          try {
+            back = await screenshotViewport();
+          } catch (err) {
+            stage.remove();
+            throw err;
+          }
+
+          // 5) Attach back face and animate the flip
+          runFlip(front, back, onDone, stage);
+          return;
+        }
+
+        const runner = TRANSITION_RUNNERS[type] || runShatter;
+
+        // 1) Screenshot the viewport
+        const shot = await screenshotViewport();
+
+        // 2) Show screenshot over the current page
+        const overlay = document.createElement("canvas");
+        overlay.id = "shatter-overlay";
+        pinCanvas(overlay, shot.width, shot.height);
+        overlay.getContext("2d").drawImage(shot, 0, 0);
+        document.body.appendChild(overlay);
+        await nextFrame();
+
+        // 3) Go to the next page underneath
+        onReveal();
+        window.scrollTo(0, 0);
+        await nextFrame();
+
+        // 4) Run the chosen transition on the screenshot
+        overlay.remove();
+        runner(shot, click, onDone);
+      }
+
+      function clickPointFromEvent(e) {
+        if (!e) return null;
+        const w = document.documentElement.clientWidth;
+        const h = document.documentElement.clientHeight;
+        return {
+          x: Math.min(w, Math.max(0, e.clientX)),
+          y: Math.min(h, Math.max(0, e.clientY)),
+        };
+      }
+
+      // ---------------------------------------------------------
+      // UI
+      // ---------------------------------------------------------
+      const TransitionPicker = ({ type, onChange, locked }) => (
+        <div className="fixed bottom-16 left-4 z-50 flex flex-col gap-1 pointer-events-none text-[0.7rem] leading-none opacity-50">
+          {TRANSITION_TYPES.map((name) => (
+            <button
+              key={name}
+              type="button"
+              disabled={locked}
+              onClick={() => onChange(name)}
+              className={`pointer-events-auto text-left neon-hover disabled:pointer-events-none ${
+                type === name ? "underline underline-offset-4" : "opacity-50"
+              }`}
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+      );
+
+      const CartBar = ({ count, onHome, onCart, locked }) => (
+        <header className="fixed top-0 left-0 right-0 z-50 flex items-start justify-between px-4 pt-4 md:px-8 md:pt-6 pointer-events-none">
+          <button
+            type="button"
+            disabled={locked}
+            onClick={onHome}
+            className="pointer-events-auto text-anell leading-none neon-hover disabled:pointer-events-none"
+          >
+            anell
+          </button>
+          <button
+            type="button"
+            disabled={locked}
+            onClick={onCart}
+            className="pointer-events-auto text-anell leading-none neon-hover disabled:pointer-events-none"
+          >
+            cart ({count})
+          </button>
+        </header>
+      );
+
+      const Marquee = ({ paused, reverseKick }) => {
+        const trackRef = React.useRef(null);
+        const offsetRef = React.useRef(0);
+        const velRef = React.useRef(0);
+        const cruiseRef = React.useRef(-1); // sign: -1 left, +1 right
+        const modeRef = React.useRef("cruise"); // cruise | stall | engine
+        const engineTRef = React.useRef(0);
+        const speedRef = React.useRef(0.8);
+
+        // Stop immediately on click / while transition runs
+        React.useEffect(() => {
+          if (!paused) return;
+          modeRef.current = "stall";
+          velRef.current = 0;
+        }, [paused]);
+
+        // After transition: stay still 0.3s, then soft reverse
+        React.useEffect(() => {
+          if (!reverseKick) return;
+          modeRef.current = "stall";
+          velRef.current = 0;
+          const timer = setTimeout(() => {
+            cruiseRef.current *= -1;
+            modeRef.current = "engine";
+            engineTRef.current = 0;
+          }, 300);
+          return () => clearTimeout(timer);
+        }, [reverseKick]);
 
         React.useEffect(() => {
-          const moveCursor = (e) => {
-            if (cursorRef.current) {
-              cursorRef.current.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0) translate(-50%, -50%)`;
+          let raf = 0;
+          const tick = () => {
+            const track = trackRef.current;
+            if (track) {
+              const half = track.scrollWidth / 2 || 1;
+              speedRef.current = Math.max(0.35, half / (120 * 60));
+
+              if (modeRef.current === "stall") {
+                velRef.current = 0;
+              } else if (modeRef.current === "engine") {
+                engineTRef.current += 1;
+                const t = engineTRef.current;
+                const duration = 110; // ~1.8s soft catch
+                const p = Math.min(1, t / duration);
+                const ease = p * p * (3 - 2 * p); // smoothstep
+                const target = cruiseRef.current * speedRef.current;
+
+                // Soft engine: gentle pulses + tiny wobble that fades out
+                const pulse = 0.65 + 0.35 * Math.sin(t * 0.18);
+                const wobble =
+                  Math.sin(t * 0.45) * (1 - ease) * speedRef.current * 0.55;
+                velRef.current = target * ease * pulse + wobble;
+
+                if (t >= duration) {
+                  velRef.current = target;
+                  modeRef.current = "cruise";
+                }
+              } else {
+                const target = cruiseRef.current * speedRef.current;
+                velRef.current += (target - velRef.current) * 0.06;
+              }
+
+              offsetRef.current += velRef.current;
+              while (offsetRef.current <= -half) offsetRef.current += half;
+              while (offsetRef.current > 0) offsetRef.current -= half;
+
+              track.style.transform = `translate3d(${offsetRef.current}px,0,0)`;
             }
+            raf = requestAnimationFrame(tick);
           };
-          window.addEventListener("mousemove", moveCursor);
-          return () => window.removeEventListener("mousemove", moveCursor);
+          raf = requestAnimationFrame(tick);
+          return () => cancelAnimationFrame(raf);
         }, []);
 
-        if (!visible || !text) return null;
-
         return (
-          <div
-            ref={cursorRef}
-            className="custom-cursor-element fixed top-0 left-0 pointer-events-none z-[9999] mix-blend-difference text-white whitespace-nowrap text-2xl"
-            style={{
-              willChange: "transform",
-              fontFamily: "'SF Pro ', 'SF Pro ', monospace",
-            }}
+          <footer
+            id="site-marquee"
+            className="fixed bottom-0 left-0 w-full overflow-hidden bg-white z-[10001] py-2 pointer-events-none"
           >
-            {text}
-          </div>
+            <div
+              ref={trackRef}
+              className="animate-marquee whitespace-nowrap flex items-center text-anell leading-none"
+            >
+              {[...Array(60)].map((_, i) => (
+                <div key={i} className="flex items-center">
+                  <span>
+                    {i % 2 === 0
+                      ? "each ring is unique and comes with its own set of flaws"
+                      : "click -> shop"}
+                  </span>
+                  <span className="mx-[1ch]">|</span>
+                </div>
+              ))}
+            </div>
+          </footer>
         );
       };
 
-      // ---------------------------------------------------------
-      // TWINT PAYMENT PAGE COMPONENT
-      // ---------------------------------------------------------
-      const TwintPage = ({ item, onBack }) => {
-        const [copied, setCopied] = React.useState(false);
+      const ImageGrid = ({ onSelect, locked }) => (
+        <main className="min-h-screen w-full pt-24 pb-28 px-1 md:px-2">
+          <div className="flex flex-col gap-16 md:gap-24">
+            {ROWS.map((row, rowIndex) => (
+              <div
+                key={rowIndex}
+                className="grid grid-cols-1 md:grid-cols-3 gap-1 items-start"
+              >
+                {row.map((product) => (
+                  <button
+                    key={product.id}
+                    type="button"
+                    disabled={locked}
+                    onClick={(e) => onSelect(product, e)}
+                    className="group flex w-full flex-col items-stretch gap-0 bg-white text-left disabled:pointer-events-none"
+                  >
+                    <img
+                      src={product.src}
+                      alt={product.alt}
+                      className="block w-full h-auto object-contain object-top transition-opacity duration-500 group-hover:opacity-80"
+                    />
+                    <span className="block text-center leading-none transition-colors duration-200 group-hover:text-[#ff2ecb]">
+                      {product.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        </main>
+      );
 
-        const messageTemplate = `${item.product.id} size ${item.size} address: [your address]`;
+      const ProductPage = ({ product, onAdd, locked }) => {
+        const [selectedSize, setSelectedSize] = React.useState(null);
+
+        const handleAdd = () => {
+          if (!selectedSize) return;
+          onAdd(selectedSize);
+        };
+
+        return (
+          <main className="w-full pt-24 pb-32 px-4 md:px-8">
+            <div className="mx-auto w-full max-w-xl flex flex-col gap-6">
+              <img
+                src={product.src}
+                alt={product.alt}
+                className="block w-full h-auto object-contain"
+              />
+
+              <div className="flex flex-col gap-4">
+                <p>{product.name}</p>
+                <p>{product.label}</p>
+
+                <div className="flex flex-wrap gap-x-4 gap-y-2">
+                  {SIZES.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      disabled={locked}
+                      onClick={() => setSelectedSize(s)}
+                      className={`neon-hover disabled:pointer-events-none ${
+                        selectedSize === s ? "text-[#ff2ecb]" : "opacity-50"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  disabled={locked || !selectedSize}
+                  onClick={handleAdd}
+                  className="neon-hover text-left disabled:pointer-events-none disabled:opacity-40"
+                >
+                  {selectedSize
+                    ? `add to cart · 30.-`
+                    : `choose size`}
+                </button>
+              </div>
+            </div>
+          </main>
+        );
+      };
+
+      const CartPage = ({ items, onClear, locked }) => {
+        const [copied, setCopied] = React.useState(false);
+        const lines = items.map(
+          (item) => `${item.name} size ${item.size}`,
+        );
+        const message = items.length
+          ? `anell order: ${lines.join(", ")} address: [your address]`
+          : "";
 
         const handleCopy = () => {
-          // Fallback for secure context requirement
+          if (!message) return;
           if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(messageTemplate).then(() => {
+            navigator.clipboard.writeText(message).then(() => {
               setCopied(true);
               setTimeout(() => setCopied(false), 2000);
             });
-          } else {
-            // Fallback for older browsers or non-HTTPS
-            const textArea = document.createElement("textarea");
-            textArea.value = messageTemplate;
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-            try {
-              document.execCommand("copy");
-              setCopied(true);
-              setTimeout(() => setCopied(false), 2000);
-            } catch (err) {
-              console.error("Unable to copy", err);
-            }
-            document.body.removeChild(textArea);
           }
         };
 
         return (
-          <div className="w-full min-h-screen flex flex-col items-center justify-center p-8 text-center bg-white gap-8 cursor-default">
-            <div className="max-w-md flex flex-col gap-6">
-              <h2 className="text-sm underline underline-offset-[5px] decoration-1">
-                payment update
-              </h2>
-
-              <p className="opacity-70">
-                our automated payment section is currently being built. you can
-                still purchase this piece via twint.
-              </p>
-
-              <div className="border border-black p-6 flex flex-col gap-4">
-                <p>send payment to:</p>
-                <p className="text-base font-bold">{TWINT_NUMBER}</p>
-              </div>
-
-              <p className="opacity-70">
-                please copy the text below and paste it into your twint message.
-                don't forget to fill in your address so we can ship your order.
-              </p>
-
-              {/* Copy Box */}
-              <div className="flex flex-col gap-2 w-full">
-                <div className="bg-gray-100 p-4 text-left break-all font-mono text-[10px] border border-transparent hover:border-black transition-colors">
-                  {messageTemplate}
-                </div>
-
-                <button
-                  onClick={handleCopy}
-                  className="w-full py-3 bg-black text-white hover:opacity-80 transition-opacity uppercase tracking-widest text-[10px]"
-                >
-                  {copied ? "copied!" : "copy text to clipboard"}
-                </button>
-              </div>
-
-              <p className="opacity-50 text-[10px] mt-4">
-                we will verify your order shortly after receipt.
-              </p>
-            </div>
-
-            <button
-              onClick={onBack}
-              className="fixed top-8 left-8 hover:underline decoration-1 underline-offset-[5px]"
-            >
-              &lt; back
-            </button>
-          </div>
-        );
-      };
-
-      // ---------------------------------------------------------
-      // PRODUCT COLUMN COMPONENT
-      // ---------------------------------------------------------
-      const ProductColumn = ({ product, setCursorText, onBuyClick }) => {
-        const [currentImageIndex, setCurrentImageIndex] = React.useState(1);
-        const [selectedSize, setSelectedSize] = React.useState(null);
-
-        const totalImages = 7;
-
-        const handleMouseMove = (e) => {
-          const rect = e.currentTarget.getBoundingClientRect();
-          const x = e.clientX - rect.left;
-          if (x < rect.width / 2) {
-            setCursorText("<");
-          } else {
-            setCursorText(">");
-          }
-        };
-
-        const handleImageClick = (e) => {
-          const rect = e.currentTarget.getBoundingClientRect();
-          const x = e.clientX - rect.left;
-
-          if (x < rect.width / 2) {
-            setCurrentImageIndex((prev) =>
-              prev === 1 ? totalImages : prev - 1,
-            );
-          } else {
-            setCurrentImageIndex((prev) =>
-              prev === totalImages ? 1 : prev + 1,
-            );
-          }
-        };
-
-        const handleImageError = (e) => {
-          e.target.style.display = "none";
-          // Try resetting to 1 if not already 1
-          if (currentImageIndex !== 1) {
-            setTimeout(() => {
-              setCurrentImageIndex(1);
-              // We don't force display block here immediately; let React re-render handle it
-            }, 0);
-          }
-        };
-
-        const handleBuy = () => {
-          if (!selectedSize) {
-            alert("Please select a size first.");
-            return;
-          }
-          onBuyClick(product, selectedSize);
-        };
-
-        const imagePath = `./${product.folderName}/${currentImageIndex}.webp`;
-
-        return (
-          <div className="flex flex-col gap-8 w-full max-w-lg mx-auto">
-            {/* IMAGE AREA - DESKTOP (Clickable) */}
-            <div
-              onMouseMove={handleMouseMove}
-              onMouseEnter={() => setCursorText("<")}
-              onMouseLeave={() => setCursorText("\u2022")}
-              onClick={handleImageClick}
-              className="hidden md:block w-full aspect-square relative bg-neutral-100 overflow-hidden select-none cursor-none-force"
-            >
-              <img
-                key={currentImageIndex} // Force re-render on change
-                src={imagePath}
-                alt={`${product.name} ${currentImageIndex}`}
-                className="w-full h-full object-cover relative z-0"
-                onError={handleImageError}
-              />
-            </div>
-
-            {/* IMAGE AREA - MOBILE (Swipeable Slider) */}
-            <div className="md:hidden w-full aspect-square relative bg-neutral-100 overflow-hidden">
-              <div className="w-full h-full flex overflow-x-auto snap-x snap-mandatory no-scrollbar">
-                {[...Array(totalImages)].map((_, i) => (
-                  <img
-                    key={i}
-                    src={`./${product.folderName}/${i + 1}.webp`}
-                    alt={`${product.name} ${i + 1}`}
-                    className="w-full h-full flex-shrink-0 object-cover snap-center"
-                    onError={(e) => (e.target.style.display = "none")}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* CONTROLS AREA */}
-            <div className="flex flex-col items-center gap-4">
-              <h2>{product.id}</h2>
-
-              <div className="flex flex-col items-center gap-2">
-                {/* SIZE SELECTOR */}
-                <div className="relative h-12 flex items-center justify-center">
-                  <div className="flex items-center gap-4 overflow-x-auto no-scrollbar max-w-[200px] whitespace-nowrap px-4">
-                    {SIZES.map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => setSelectedSize(s)}
-                        className={`hover:underline decoration-1 underline-offset-[5px] transition-all ${
-                          selectedSize === s ? "underline" : "opacity-60"
-                        }`}
-                      >
-                        {s}
-                      </button>
+          <main className="w-full pt-24 pb-32 px-4 md:px-8">
+            <div className="mx-auto w-full max-w-xl flex flex-col gap-6">
+              {items.length === 0 ? (
+                <p>cart empty</p>
+              ) : (
+                <>
+                  <div className="flex flex-col gap-2">
+                    {items.map((item, i) => (
+                      <p key={`${item.id}-${item.size}-${i}`}>
+                        {item.name} · size {item.size}
+                      </p>
                     ))}
                   </div>
-                </div>
-
-                {/* BUY BUTTON */}
-                <button
-                  onClick={handleBuy}
-                  className="px-6 py-2 mt-2 hover:underline decoration-1 underline-offset-[5px] transition-all"
-                >
-                  kaufen 30.-
-                </button>
-              </div>
+                  <p className="opacity-60">send twint to {TWINT_NUMBER}</p>
+                  <button
+                    type="button"
+                    disabled={locked}
+                    onClick={handleCopy}
+                    className="neon-hover text-left disabled:pointer-events-none"
+                  >
+                    {copied ? "copied" : "copy order text"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={locked}
+                    onClick={onClear}
+                    className="neon-hover text-left disabled:pointer-events-none"
+                  >
+                    clear
+                  </button>
+                </>
+              )}
             </div>
-          </div>
+          </main>
         );
       };
 
-      // ---------------------------------------------------------
-      // MAIN APP COMPONENT
-      // ---------------------------------------------------------
       const App = () => {
-        const [cursorText, setCursorText] = React.useState("\u2022");
-        const [checkoutItem, setCheckoutItem] = React.useState(null);
+        const [view, setView] = React.useState("home");
+        const [product, setProduct] = React.useState(null);
+        const [cart, setCart] = React.useState([]);
+        const [locked, setLocked] = React.useState(false);
+        const [marqueeKick, setMarqueeKick] = React.useState(0);
 
-        const scrollToShop = () => {
-          const el = document.getElementById("shop-section");
-          if (el) el.scrollIntoView({ behavior: "smooth" });
-        };
+        const navigate = React.useCallback(
+          async (nextView, nextProduct, event) => {
+            if (locked) return;
+            if (nextView === view && nextProduct?.id === product?.id) return;
 
-        if (checkoutItem) {
-          return (
-            <div className="relative min-h-screen bg-white text-black overflow-x-hidden">
-              <CustomCursor text={cursorText} visible={!!cursorText} />
-              <TwintPage
-                item={checkoutItem}
-                onBack={() => setCheckoutItem(null)}
-              />
-            </div>
-          );
-        }
+            const click = clickPointFromEvent(event);
+            setLocked(true);
+            try {
+              await transitionTo({
+                type: "fall",
+                click,
+                onReveal: () => {
+                  setView(nextView);
+                  setProduct(nextProduct ?? null);
+                },
+                onDone: () => {
+                  setLocked(false);
+                  setMarqueeKick((k) => k + 1);
+                },
+              });
+            } catch (err) {
+              console.error(err);
+              setView(nextView);
+              setProduct(nextProduct ?? null);
+              setLocked(false);
+              setMarqueeKick((k) => k + 1);
+            }
+          },
+          [locked, view, product],
+        );
 
         return (
-          <div className="relative min-h-screen bg-white text-black overflow-x-hidden pb-12">
-            {/* GLOBAL CUSTOM CURSOR */}
-            <CustomCursor text={cursorText} visible={!!cursorText} />
+          <div className="relative min-h-screen bg-white text-black text-anell leading-none">
+            <CartBar
+              count={cart.length}
+              locked={locked}
+              onHome={(e) => navigate("home", null, e)}
+              onCart={(e) => navigate("cart", null, e)}
+            />
 
-            {/* --- 1. HERO HEADER --- */}
-            <header
-              className="relative w-full h-screen overflow-hidden cursor-none-force bg-black"
-              onClick={scrollToShop}
-              onMouseEnter={() => setCursorText("anell")}
-              onMouseLeave={() => setCursorText("\u2022")}
-            >
-              <div className="absolute inset-0 w-full h-full object-cover invert">
-                <video
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="w-full h-full object-cover opacity-90"
-                  src="./output_touchdesigner/2.mp4"
-                />
-              </div>
-            </header>
+            {view === "home" && (
+              <ImageGrid
+                locked={locked}
+                onSelect={(p, e) => navigate("product", p, e)}
+              />
+            )}
+            {view === "product" && product && (
+              <ProductPage
+                key={product.id}
+                product={product}
+                locked={locked}
+                onAdd={(size) =>
+                  setCart((prev) => [
+                    ...prev,
+                    { id: product.id, name: product.name, size },
+                  ])
+                }
+              />
+            )}
+            {view === "cart" && (
+              <CartPage
+                items={cart}
+                locked={locked}
+                onClear={() => setCart([])}
+              />
+            )}
 
-            {/* --- 2. SHOP SECTION --- */}
-            <section
-              id="shop-section"
-              className="w-full min-h-screen flex items-center justify-center py-24 bg-white"
-            >
-              <div className="w-full max-w-6xl px-4 md:px-12">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-24">
-                  {PRODUCTS.map((product) => (
-                    <ProductColumn
-                      key={product.id}
-                      product={product}
-                      setCursorText={setCursorText}
-                      onBuyClick={(prod, size) =>
-                        setCheckoutItem({ product: prod, size })
-                      }
-                    />
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            {/* --- 3. INFINITE FOOTER MARQUEE --- */}
-            <footer className="fixed bottom-0 left-0 w-full overflow-hidden bg-white z-40 py-2 pointer-events-none">
-              <div className="animate-marquee whitespace-nowrap flex items-center">
-                {[...Array(60)].map((_, i) => (
-                  <div key={i} className="flex items-center">
-                    <span>
-                      {i % 2 === 0
-                        ? "each ring is unique and comes with its own set of flaws"
-                        : "click -> shop"}
-                    </span>
-                    <span className="mx-[1ch]">|</span>
-                  </div>
-                ))}
-              </div>
-            </footer>
+            <Marquee paused={locked} reverseKick={marqueeKick} />
           </div>
         );
       };
