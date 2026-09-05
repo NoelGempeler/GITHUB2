@@ -12,9 +12,22 @@
           extend: {
             fontFamily: {
               anell: ['"CirrusCumulus"', "Courier New", "Courier", "monospace"],
+              y2k: ['"CirrusCumulus"', "Courier New", "Courier", "monospace"],
             },
             fontSize: {
-              anell: "4rem",
+              anell: "2rem",
+            },
+            colors: {
+              y2k: {
+                navy: "#000080",
+                link: "#0000ee",
+                visited: "#551a8b",
+                silver: "#c0c0c0",
+                face: "#d4d0c8",
+                yellow: "#ffff00",
+                lime: "#00ff00",
+                panel: "#ffffff",
+              },
             },
           },
         },
@@ -36,27 +49,53 @@
       @font-face {
         font-family: "CirrusCumulus";
         src: url("./fonts/CirrusCumulus.woff") format("woff");
-        font-weight: normal;
+        font-weight: 100 900;
         font-style: normal;
         font-display: swap;
       }
 
       html {
-        scroll-behavior: smooth;
         overflow-x: clip;
       }
 
       body {
         font-family: "CirrusCumulus", "Courier New", Courier, monospace;
-        font-size: 4rem;
-        line-height: 1;
+        font-size: 1.25rem;
+        font-weight: 700;
+        line-height: 1.2;
         overscroll-behavior: none;
         overflow-x: clip;
+        color: #0000ee;
+        /* faux weight — font only ships one cut */
+        -webkit-text-stroke: 0.35px currentColor;
+        text-shadow: 0.4px 0 0 currentColor, -0.4px 0 0 currentColor;
+        background-color: #8a8a8a;
+        background-image: url("./assets/diamond-plate.jpg");
+        background-repeat: repeat;
+        background-size: 320px auto;
+        background-position: center top;
+      }
+
+      body.bg-ring-open {
+        background-image: url("./assets/silver-pile.jpg");
+        background-repeat: repeat;
+        background-size: 220px auto;
+        background-position: center top;
+        background-attachment: scroll;
+      }
+
+      body.bg-cart {
+        background-image: url("./assets/welder.png");
+        background-repeat: repeat;
+        /* tile width 2× horizontal stretch, height stays natural for 180px scale */
+        background-size: 360px 195px;
+        background-position: center top;
+        background-attachment: scroll;
       }
 
       ::selection {
-        background-color: #ff2ecb;
-        color: white;
+        background-color: #0000ee;
+        color: #ffff00;
       }
 
       @keyframes marquee {
@@ -73,58 +112,162 @@
         will-change: transform;
       }
 
+      .y2k-outset {
+        border: 1px solid #000000;
+        background: #d4d0c8;
+      }
+
+      .y2k-inset {
+        border: 1px solid #000000;
+        background: #ffffff;
+      }
+
+      .y2k-btn {
+        border-style: solid;
+        border-width: 2px;
+        border-color: #ffffff #404040 #404040 #ffffff;
+        background: #c0c0c0;
+        color: #000000;
+        text-decoration: none;
+        padding: 0.2em 0.7em;
+        cursor: pointer;
+        font-family: inherit;
+        box-shadow: inset -1px -1px 0 #808080, inset 1px 1px 0 #dfdfdf;
+      }
+
+      .y2k-btn:active:not(:disabled) {
+        border-color: #404040 #ffffff #ffffff #404040;
+        box-shadow: inset 1px 1px 0 #808080;
+        padding: 0.22em 0.65em 0.18em 0.75em;
+      }
+
+      .y2k-btn:disabled {
+        color: #808080;
+        cursor: default;
+      }
+
+      .y2k-photo {
+        width: 100%;
+        height: auto;
+        object-fit: contain;
+        /* stretch tiny JPEG like early dial-up product shots */
+        image-rendering: auto;
+        filter: contrast(1.12) saturate(0.88) brightness(1.03);
+      }
+
+      .y2k-link {
+        color: #0000ee;
+        text-decoration: underline;
+        cursor: pointer;
+      }
+
+      .y2k-link:hover:not(:disabled) {
+        color: #ff00ff;
+      }
+
+      .y2k-link.active {
+        color: #ff0000;
+        font-weight: bold;
+      }
+
+      hr.y2k-hr {
+        border: 0;
+        height: 3px;
+        background: linear-gradient(to bottom, #808080, #ffffff);
+        margin: 0.75rem 0;
+      }
+
       .neon-hover {
-        transition: color 0.2s ease;
+        color: #0000ee;
+        text-decoration: underline;
       }
 
       .neon-hover:hover:not(:disabled) {
-        color: #ff2ecb;
+        color: #ff00ff;
+      }
+
+      @keyframes y2k-blink {
+        0%,
+        49% {
+          opacity: 1;
+        }
+        50%,
+        100% {
+          opacity: 0;
+        }
+      }
+
+      .y2k-blink {
+        animation: y2k-blink 1s step-start infinite;
       }
     </style>
   </head>
 
-  <body class="bg-white text-black antialiased lowercase">
+  <body class="text-y2k-link antialiased">
     <div id="root"></div>
 
     <script type="text/babel">
       const TWINT_NUMBER = "+41 78 985 88 88";
+      // One Stripe link per product (single / pack of 2 / pack of 3)
+      const STRIPE_LINKS = {
+        1: "https://buy.stripe.com/7sYaEX4KT0DDgHmgKsaEE01",
+        2: "https://buy.stripe.com/REPLACE_PACK_OF_2",
+        3: "https://buy.stripe.com/REPLACE_PACK_OF_3",
+      };
 
-      const PRODUCTS = [
-        { id: 1, src: "./gallery/01.png", alt: "bag sealed", name: "001", label: "placeholder" },
-        { id: 2, src: "./gallery/02.png", alt: "hands with silver", name: "002", label: "placeholder" },
-        { id: 3, src: "./gallery/03.png", alt: "bag soft", name: "003", label: "placeholder" },
-        { id: 4, src: "./gallery/04.png", alt: "melted form", name: "004", label: "placeholder" },
-        { id: 5, src: "./gallery/05.png", alt: "zubrowka shards", name: "005", label: "placeholder" },
-        { id: 6, src: "./gallery/06.png", alt: "organic field", name: "006", label: "placeholder" },
-        { id: 7, src: "./gallery/07.png", alt: "zubrowka metal", name: "007", label: "placeholder" },
-        { id: 8, src: "./gallery/08.png", alt: "melted hands", name: "008", label: "placeholder" },
-        { id: 9, src: "./gallery/09.png", alt: "cupped hands", name: "009", label: "placeholder" },
+      // Two ring types available for every size
+      const RING_VARIANTS = [
+        { id: "a", name: "001", src: "./ring1/1.webp" },
+        { id: "b", name: "002", src: "./ring2/1.webp" },
       ];
 
-      const ROWS = [
-        PRODUCTS.slice(0, 3),
-        PRODUCTS.slice(3, 6),
-        PRODUCTS.slice(6, 9),
+      const PRODUCTS = [
+        { id: 1, src: "./gallery/01.png", alt: "one ring", name: "001", label: "one ring", pack: 1 },
+        { id: 2, src: "./gallery/02.png", alt: "pack of 2", name: "002", label: "pack of 2", pack: 2 },
+        { id: 3, src: "./gallery/03.png", alt: "pack of 3", name: "003", label: "pack of 3", pack: 3 },
       ];
 
       const SIZES = [48, 50, 52, 54, 56, 58, 60, 62, 64, 66];
 
+      function encodeOrderRef(pack, picks) {
+        // e.g. pack3_001-52_002-54_001-56  (fits Stripe client_reference_id)
+        const parts = picks.map((p) => `${p.variant}-${p.size}`).join("_");
+        return `pack${pack}_${parts}`.slice(0, 200);
+      }
+
+      function stripeLinkReady(pack) {
+        const link = STRIPE_LINKS[pack];
+        return Boolean(link && !link.includes("REPLACE_"));
+      }
+
       // ---------------------------------------------------------
       // Page transitions
       //   shatter — triangles fall off screen
-      //   crumble — viewport crumples into a paper ball at click
+      //   crumble — paper folds along creases, then gathers
+      //   crumble2 — heavier morph / swirl into a wad
       //   fall    — whole sheet tips toward you
+      //   fall2   — push over at click; stands on slider, tips away & falls out
+      //   shrink  — viewport shrinks into the click and vanishes
       //   drape   — static fold panels open outward
       //   curtain — physics cloth curtains on canvas
       //   flip    — horizontal card flip; back is destination, void is black
+      //   ripple  — water-like radial waves from click
+      //   ripple2 — simple expanding circle reveal from click
+      //   clock   — clockwise pie wipe around the click
       // ---------------------------------------------------------
       const TRANSITION_TYPES = [
         "shatter",
         "crumble",
+        "crumble2",
         "fall",
+        "fall2",
+        "shrink",
         "drape",
         "curtain",
         "flip",
+        "ripple",
+        "ripple2",
+        "clock",
       ];
 
       function easeInCubic(t) {
@@ -137,6 +280,49 @@
 
       function easeInOutCubic(t) {
         return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      }
+
+      // Two ease-out bursts, pauses, then final exit — shared by drape + curtain
+      function drapeOpen(t) {
+        const t1 = 0.32;
+        const p1 = 0.38;
+        const t2 = 0.58;
+        const p2 = 0.68;
+        const t3 = 1.0;
+        if (t <= t1) return easeOutCubic(t / t1) * 0.34;
+        if (t <= p1) return 0.34;
+        if (t <= t2) {
+          const u = (t - p1) / (t2 - p1);
+          return 0.34 + easeOutCubic(u) * 0.36;
+        }
+        if (t <= p2) return 0.7;
+        const u = (t - p2) / (t3 - p2);
+        return 0.7 + easeInOutCubic(u) * 0.3;
+      }
+
+      // Ease in soft, then brake hard into the stop
+      function easeInThenSnapOut(u) {
+        u = Math.min(1, Math.max(0, u));
+        if (u < 0.55) {
+          const x = u / 0.55;
+          return 0.55 * x * x * x; // long soft ease-in
+        }
+        const x = (u - 0.55) / 0.45;
+        return 0.55 + 0.45 * (1 - Math.pow(1 - x, 4)); // quick settle
+      }
+
+      // Curtain: ease into burst → snap stop → pause → repeat → exit
+      function curtainOpen(t) {
+        // move, pause, move, pause, exit
+        const a1 = 0.22; // end first burst
+        const p1 = 0.34; // end first pause
+        const a2 = 0.56;
+        const p2 = 0.68;
+        if (t <= a1) return easeInThenSnapOut(t / a1) * 0.18;
+        if (t <= p1) return 0.18;
+        if (t <= a2) return 0.18 + easeInThenSnapOut((t - p1) / (a2 - p1)) * 0.22;
+        if (t <= p2) return 0.4;
+        return 0.4 + easeInThenSnapOut((t - p2) / (1 - p2)) * 0.6;
       }
 
       function nextFrame() {
@@ -165,11 +351,7 @@
 
       async function screenshotViewport() {
         const w = document.documentElement.clientWidth;
-        const fullH = document.documentElement.clientHeight;
-        const marquee = document.getElementById("site-marquee");
-        const marqueeH = marquee ? Math.ceil(marquee.getBoundingClientRect().height) : 0;
-        // Capture only the content viewport — slider stays its own layer
-        const h = Math.max(1, fullH - marqueeH);
+        const h = document.documentElement.clientHeight;
         const scrollX = window.scrollX;
         const scrollY = window.scrollY;
 
@@ -179,7 +361,7 @@
           height: h,
           canvasWidth: w,
           canvasHeight: h,
-          backgroundColor: "#ffffff",
+          backgroundColor: "#8a8a8a",
           style: {
             transform: `translate(${-scrollX}px, ${-scrollY}px)`,
             transformOrigin: "top left",
@@ -189,8 +371,7 @@
             return (
               node.id !== "shatter-layer" &&
               node.id !== "shatter-freeze" &&
-              node.id !== "shatter-overlay" &&
-              node.id !== "site-marquee"
+              node.id !== "shatter-overlay"
             );
           },
         });
@@ -199,7 +380,7 @@
         out.width = w;
         out.height = h;
         const ctx = out.getContext("2d");
-        ctx.fillStyle = "#ffffff";
+        ctx.fillStyle = "#8a8a8a";
         ctx.fillRect(0, 0, w, h);
         ctx.drawImage(shot, 0, 0);
         return out;
@@ -328,8 +509,8 @@
         requestAnimationFrame(tick);
       }
 
-      // --- crumble: page sucks into a paper ball at the click ---
-      function runCrumble(sourceCanvas, click, onComplete) {
+      // Shared crumple sheet renderer (mesh seams hidden via overlap, optional shade)
+      function makeCrumbleSheet(sourceCanvas, click, opts) {
         const prev = document.getElementById("shatter-layer");
         if (prev) prev.remove();
 
@@ -350,41 +531,155 @@
             ? Math.min(h, Math.max(0, click.y))
             : h / 2;
 
-        // Smaller scraps so it reads as crumpled paper
-        const pieces = buildTriangles(w, h, 14, 9, 0.75).map((tri) => {
-          const [a, b, c] = tri;
-          const cx = (a[0] + b[0] + c[0]) / 3;
-          const cy = (a[1] + b[1] + c[1]) / 3;
-          const dx = cx - ox;
-          const dy = cy - oy;
-          const dist = Math.hypot(dx, dy) || 1;
-          const angle = Math.atan2(dy, dx);
-          // Land in a tight ball around the click, with a swirl
-          const ballR = 10 + Math.random() * 28;
-          const swirl = angle + (1.2 + Math.random() * 2.4);
-          const endX = ox + Math.cos(swirl) * ballR * (0.3 + Math.random());
-          const endY = oy + Math.sin(swirl) * ballR * (0.3 + Math.random());
+        const cols = opts.cols;
+        const rows = opts.rows;
+        const seed = Math.random() * 1000;
+        const foldAxis = seed * 0.017;
+        const foldCount = 3 + Math.floor(seed % 3);
+        const n1 = (i, j) =>
+          Math.sin(i * 0.55 + j * 0.32 + seed) *
+          Math.cos(j * 0.4 + seed * 0.3);
+        const n2 = (i, j) => Math.sin(i * 0.25 + j * 0.7 + seed * 1.7 + 1.2);
+        const n3 = (i, j) => Math.sin((i + j) * 0.35 + seed * 0.8 + 0.4);
+        const n4 = (i, j) => Math.cos(i * 0.7 - j * 0.4 + seed * 1.1);
 
-          return {
-            cx,
-            cy,
-            local: [
-              [a[0] - cx, a[1] - cy],
-              [b[0] - cx, b[1] - cy],
-              [c[0] - cx, c[1] - cy],
-            ],
-            tx: endX - cx,
-            ty: endY - cy,
-            rot: (Math.random() - 0.5) * Math.PI * 5,
-            scaleEnd: 0.08 + Math.random() * 0.14,
-            // Outer scraps start moving first (paper peeling in)
-            delay: (dist / Math.hypot(w, h)) * 0.35 + Math.random() * 0.08,
-          };
+        const grid = [];
+        for (let j = 0; j <= rows; j++) {
+          const row = [];
+          for (let i = 0; i <= cols; i++) {
+            const x0 = (i / cols) * w;
+            const y0 = (j / rows) * h;
+            const u = x0 / w;
+            const vv = y0 / h;
+            const along = u * Math.cos(foldAxis) + vv * Math.sin(foldAxis);
+            const across = -u * Math.sin(foldAxis) + vv * Math.cos(foldAxis);
+            row.push({
+              x0,
+              y0,
+              i,
+              j,
+              wr1: n1(i, j),
+              wr2: n2(i, j),
+              wr3: n3(i, j),
+              wr4: n4(i, j),
+              crease: Math.sin(along * foldCount * Math.PI + seed),
+              crease2: Math.sin(across * 2.2 * Math.PI + seed * 0.6),
+            });
+          }
+          grid.push(row);
+        }
+
+        const faces = [];
+        for (let j = 0; j < rows; j++) {
+          for (let i = 0; i < cols; i++) {
+            const a = grid[j][i];
+            const b = grid[j][i + 1];
+            const c = grid[j + 1][i];
+            const d = grid[j + 1][i + 1];
+            const area0 = Math.abs(
+              (b.x0 - a.x0) * (c.y0 - a.y0) - (c.x0 - a.x0) * (b.y0 - a.y0),
+            );
+            if ((i + j) % 2 === 0) {
+              faces.push([a, b, d, area0 * 0.5], [a, d, c, area0 * 0.5]);
+            } else {
+              faces.push([a, b, c, area0 * 0.5], [b, d, c, area0 * 0.5]);
+            }
+          }
+        }
+
+        const wadR = Math.min(w, h) * opts.wadScale + (seed % 20);
+        const cellW = w / cols;
+        const cellH = h / rows;
+        const crumpleVertex = opts.crumpleVertex({
+          ox,
+          oy,
+          wadR,
+          foldAxis,
+          cellW,
+          cellH,
         });
 
-        const hold = 0.05;
-        const suckDuration = 1.15;
-        const ballDuration = 0.45;
+        function drawSheetTri(p0, p1, p2, q0, q1, q2, shade) {
+          // Skip flipped / collapsed faces — those flash as triangles through the plane
+          const restSign =
+            (p1.x0 - p0.x0) * (p2.y0 - p0.y0) - (p2.x0 - p0.x0) * (p1.y0 - p0.y0);
+          const nowSign =
+            (q1.x - q0.x) * (q2.y - q0.y) - (q2.x - q0.x) * (q1.y - q0.y);
+          if (restSign * nowSign <= 0) return;
+          if (Math.abs(nowSign) < 1.5) return;
+
+          // Tiny expand only — too much pad = faces stab through neighbors
+          const cx = (q0.x + q1.x + q2.x) / 3;
+          const cy = (q0.y + q1.y + q2.y) / 3;
+          const pad = Math.min(opts.triPad, 0.55);
+          const grow = (q) => {
+            const dx = q.x - cx;
+            const dy = q.y - cy;
+            const len = Math.hypot(dx, dy) || 1;
+            return { x: q.x + (dx / len) * pad, y: q.y + (dy / len) * pad };
+          };
+          const d0 = grow(q0);
+          const d1 = grow(q1);
+          const d2 = grow(q2);
+
+          const x0 = p0.x0;
+          const y0 = p0.y0;
+          const x1 = p1.x0;
+          const y1 = p1.y0;
+          const x2 = p2.x0;
+          const y2 = p2.y0;
+          const u0 = q0.x;
+          const v0 = q0.y;
+          const u1 = q1.x;
+          const v1 = q1.y;
+          const u2 = q2.x;
+          const v2 = q2.y;
+
+          const delta = x0 * (y1 - y2) + x1 * (y2 - y0) + x2 * (y0 - y1);
+          if (Math.abs(delta) < 0.0001) return;
+
+          const ma = (u0 * (y1 - y2) + u1 * (y2 - y0) + u2 * (y0 - y1)) / delta;
+          const mb = (u0 * (x2 - x1) + u1 * (x0 - x2) + u2 * (x1 - x0)) / delta;
+          const mc =
+            (u0 * (x1 * y2 - x2 * y1) +
+              u1 * (x2 * y0 - x0 * y2) +
+              u2 * (x0 * y1 - x1 * y0)) /
+            delta;
+          const md = (v0 * (y1 - y2) + v1 * (y2 - y0) + v2 * (y0 - y1)) / delta;
+          const me = (v0 * (x2 - x1) + v1 * (x0 - x2) + v2 * (x1 - x0)) / delta;
+          const mf =
+            (v0 * (x1 * y2 - x2 * y1) +
+              v1 * (x2 * y0 - x0 * y2) +
+              v2 * (x0 * y1 - x1 * y0)) /
+            delta;
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(d0.x, d0.y);
+          ctx.lineTo(d1.x, d1.y);
+          ctx.lineTo(d2.x, d2.y);
+          ctx.closePath();
+          ctx.clip();
+          ctx.setTransform(ma, md, mb, me, mc, mf);
+          ctx.drawImage(sourceCanvas, 0, 0);
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+          if (opts.useShade && shade > 0.02) {
+            ctx.beginPath();
+            ctx.moveTo(d0.x, d0.y);
+            ctx.lineTo(d1.x, d1.y);
+            ctx.lineTo(d2.x, d2.y);
+            ctx.closePath();
+            ctx.fillStyle = `rgba(25,18,10,${Math.min(0.55, shade)})`;
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+
+        const hold = 0.03;
+        const crumpleDur = opts.crumpleDur;
+        const settleDur = 0.22;
+        const fallDur = 0.75;
         const start = performance.now();
         ctx.drawImage(sourceCanvas, 0, 0);
 
@@ -399,46 +694,482 @@
             return;
           }
 
-          const suckT = t - hold;
-          // After scraps form a ball, the whole ball shrinks away
-          const ballT = Math.max(0, suckT - suckDuration);
-          const ballScale =
-            ballT <= 0
-              ? 1
-              : Math.max(0, 1 - easeInCubic(Math.min(1, ballT / ballDuration)));
+          const local = t - hold;
+          const crumpleT = Math.min(1, local / crumpleDur);
+          const settleT = Math.max(0, local - crumpleDur);
+          const fallT = Math.max(0, local - crumpleDur - settleDur);
 
-          // Draw farthest-from-center first so ball sits on top
-          const sorted = pieces
-            .map((piece) => {
-              const local = Math.max(0, suckT - piece.delay);
-              const e = easeInOutCubic(Math.min(1, local / suckDuration));
-              return { piece, e };
-            })
-            .sort((a, b) => a.e - b.e);
-
-          ctx.save();
-          if (ballScale < 1) {
-            ctx.translate(ox, oy);
-            ctx.scale(ballScale, ballScale);
-            ctx.rotate(ballT * 6);
-            ctx.translate(-ox, -oy);
+          let amount = crumpleT;
+          let wadRot = 0;
+          let fallY = 0;
+          let fallX = 0;
+          if (settleT > 0 && fallT <= 0) {
+            const s = easeOutCubic(Math.min(1, settleT / settleDur));
+            wadRot = s * 0.2;
+            amount = 1;
+          }
+          if (fallT > 0) {
+            const f = easeInCubic(Math.min(1, fallT / fallDur));
+            amount = 1;
+            wadRot = 0.2 + f * 2.8;
+            fallY = f * (h - oy + 160);
+            fallX = f * f * 40 * (ox < w / 2 ? -1 : 1);
           }
 
-          sorted.forEach(({ piece, e }) => {
-            const scale = 1 - (1 - piece.scaleEnd) * e;
-            drawPiece(
-              ctx,
-              sourceCanvas,
-              piece,
-              piece.cx + piece.tx * e,
-              piece.cy + piece.ty * e,
-              piece.rot * e,
-              scale,
-            );
-          });
-          ctx.restore();
+          const cosR = Math.cos(wadRot);
+          const sinR = Math.sin(wadRot);
+          for (let j = 0; j <= rows; j++) {
+            for (let i = 0; i <= cols; i++) {
+              const v = grid[j][i];
+              const p = crumpleVertex(v, amount);
+              let x = p.x - ox;
+              let y = p.y - oy;
+              const rx = x * cosR - y * sinR;
+              const ry = x * sinR + y * cosR;
+              v.x = rx + ox + fallX;
+              v.y = ry + oy + fallY;
+              v.z = p.z;
+            }
+          }
 
-          if (t < hold + suckDuration + ballDuration + 0.05) {
+          const sorted = faces
+            .map((face) => {
+              const [a, b, c, area0] = face;
+              const signed =
+                (b.x - a.x) * (c.y - a.y) - (c.x - a.x) * (b.y - a.y);
+              const restSigned =
+                (b.x0 - a.x0) * (c.y0 - a.y0) - (c.x0 - a.x0) * (b.y0 - a.y0);
+              // Drop inverted faces early so they never punch through
+              if (signed * restSigned <= 0 || Math.abs(signed) < 1.5) {
+                return null;
+              }
+              const z = (a.z + b.z + c.z) / 3;
+              const area = Math.abs(signed);
+              const compress = 1 - Math.min(1, area / Math.max(area0, 1));
+              const shade = opts.shade(a, z, compress, amount);
+              return { a, b, c, z, shade };
+            })
+            .filter(Boolean)
+            .sort((p, q) => p.z - q.z);
+
+          sorted.forEach(({ a, b, c, shade }) => {
+            drawSheetTri(a, b, c, a, b, c, shade);
+          });
+
+          if (t < hold + crumpleDur + settleDur + fallDur + 0.04) {
+            requestAnimationFrame(tick);
+          } else {
+            canvas.remove();
+            opts.onComplete();
+          }
+        };
+
+        requestAnimationFrame(tick);
+      }
+
+      // --- crumble: paper folds along creases, then gathers (no mesh look) ---
+      function runCrumble(sourceCanvas, click, onComplete) {
+        makeCrumbleSheet(sourceCanvas, click, {
+          cols: 28,
+          rows: 18,
+          wadScale: 0.34,
+          crumpleDur: 1.7,
+          triPad: 0.45,
+          useShade: false,
+          shade: () => 0,
+          onComplete,
+          crumpleVertex: ({ ox, oy, wadR, foldAxis, cellW }) => (v, amount) => {
+            const a = Math.min(1, Math.max(0, amount));
+            const foldA = easeOutCubic(Math.min(1, a * 1.35));
+            const gatherA = Math.pow(Math.max(0, (a - 0.42) / 0.58), 2.35);
+
+            const acrossX = -Math.sin(foldAxis);
+            const acrossY = Math.cos(foldAxis);
+            const ridge = (c) => Math.sign(c) * Math.pow(Math.abs(c), 0.45);
+            // Cap fold so neighbors can't cross → no stabbing triangles
+            const maxAmp = cellW * 0.38;
+            let amp =
+              (ridge(v.crease) * 18 + ridge(v.crease2) * 7) *
+              foldA *
+              (1 - gatherA * 0.75);
+            amp = Math.max(-maxAmp, Math.min(maxAmp, amp));
+
+            let x = v.x0 + acrossX * amp;
+            let y = v.y0 + acrossY * amp;
+
+            const dx = x - ox;
+            const dy = y - oy;
+            const dist = Math.hypot(dx, dy) || 0.0001;
+            const ang = Math.atan2(dy, dx);
+            const targetR = wadR * (0.94 + 0.06 * v.wr1);
+            const r = dist * (1 - gatherA * 0.7) + targetR * gatherA * 0.7;
+
+            x = ox + Math.cos(ang) * r;
+            y = oy + Math.sin(ang) * r;
+
+            return {
+              x,
+              y,
+              z: Math.abs(ridge(v.crease)) * 12 * foldA + gatherA * 5,
+            };
+          },
+        });
+      }
+
+      // --- crumble2: heavier morph / swirl wad (previous look) ---
+      function runCrumble2(sourceCanvas, click, onComplete) {
+        makeCrumbleSheet(sourceCanvas, click, {
+          cols: 20,
+          rows: 13,
+          wadScale: 0.3,
+          crumpleDur: 1.45,
+          triPad: 0.35,
+          useShade: true,
+          shade: (a, z, compress, amount) =>
+            compress * 0.35 +
+            Math.max(0, -z) * 0.008 +
+            amount * 0.05 * (0.5 + 0.5 * a.wr2),
+          onComplete,
+          crumpleVertex: ({ ox, oy, wadR, cellW }) => (v, amount) => {
+            const a = easeInOutCubic(Math.min(1, Math.max(0, amount)));
+            const dx = v.x0 - ox;
+            const dy = v.y0 - oy;
+            const dist = Math.hypot(dx, dy) || 0.0001;
+            const ang = Math.atan2(dy, dx);
+
+            const foldPeak = Math.sin(a * Math.PI);
+            const pack = Math.pow(a, 1.25) * 0.68;
+
+            const perpX = -dy / dist;
+            const perpY = dx / dist;
+            const maxAmp = cellW * 0.42;
+            let foldAmp =
+              (v.crease * 36 + v.crease2 * 16 + v.wr2 * 8) * foldPeak;
+            foldAmp = Math.max(-maxAmp, Math.min(maxAmp, foldAmp));
+
+            const swirl = ang + pack * (0.16 + v.wr1 * 0.1);
+            const lump = 0.92 + 0.08 * v.wr1;
+            const targetR = wadR * lump + v.crease * 6 + v.wr2 * 3;
+            const r = dist * (1 - pack) + targetR * pack;
+
+            const bx = ox + Math.cos(swirl) * r;
+            const by = oy + Math.sin(swirl) * r;
+
+            return {
+              x: bx + perpX * foldAmp * (1 - pack * 0.55),
+              y: by + perpY * foldAmp * (1 - pack * 0.55),
+              z:
+                Math.abs(v.crease) * 14 * pack +
+                foldPeak * Math.abs(v.crease) * 10 +
+                pack * 6,
+            };
+          },
+        });
+      }
+
+      // --- ripple: water-like radial waves from click reveal the next page ---
+      function runRipple(sourceCanvas, click, onComplete) {
+        const prev = document.getElementById("shatter-layer");
+        if (prev) prev.remove();
+
+        const w = sourceCanvas.width;
+        const h = sourceCanvas.height;
+        const canvas = document.createElement("canvas");
+        canvas.id = "shatter-layer";
+        pinCanvas(canvas, w, h);
+        document.body.appendChild(canvas);
+        const ctx = canvas.getContext("2d");
+
+        const ox =
+          click && Number.isFinite(click.x)
+            ? Math.min(w, Math.max(0, click.x))
+            : w / 2;
+        const oy =
+          click && Number.isFinite(click.y)
+            ? Math.min(h, Math.max(0, click.y))
+            : h / 2;
+
+        const maxR =
+          Math.hypot(Math.max(ox, w - ox), Math.max(oy, h - oy)) + 60;
+
+        // Half-res buffer for water displacement (keeps it smooth + fast)
+        const scale = 0.5;
+        const rw = Math.max(1, Math.floor(w * scale));
+        const rh = Math.max(1, Math.floor(h * scale));
+        const sox = ox * scale;
+        const soy = oy * scale;
+        const small = document.createElement("canvas");
+        small.width = rw;
+        small.height = rh;
+        const sctx = small.getContext("2d", { willReadFrequently: true });
+        sctx.drawImage(sourceCanvas, 0, 0, rw, rh);
+        const src = sctx.getImageData(0, 0, rw, rh);
+        const srcD = src.data;
+        const out = sctx.createImageData(rw, rh);
+        const outD = out.data;
+
+        const hold = 0.05;
+        const duration = 2.15;
+        const start = performance.now();
+        ctx.drawImage(sourceCanvas, 0, 0);
+
+        const tick = (now) => {
+          const t = (now - start) / 1000;
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.globalCompositeOperation = "source-over";
+          ctx.globalAlpha = 1;
+          ctx.clearRect(0, 0, w, h);
+
+          if (t < hold) {
+            ctx.drawImage(sourceCanvas, 0, 0);
+            requestAnimationFrame(tick);
+            return;
+          }
+
+          const local = t - hold;
+          const e = easeOutCubic(Math.min(1, local / duration));
+          // Front of the expanding water wave
+          const front = e * maxR * scale;
+          // Tighter wavelength = more ripple rings
+          const wavelength = 11;
+          const travel = local * 48;
+          const amp0 = 6.2 * (1 - e * 0.55);
+
+          for (let y = 0; y < rh; y++) {
+            for (let x = 0; x < rw; x++) {
+              const dx = x - sox;
+              const dy = y - soy;
+              const dist = Math.hypot(dx, dy);
+              const i = (y * rw + x) * 4;
+
+              // Soft reveal: past the wave front, fade out old page
+              const past = dist - front;
+              if (past < -wavelength * 2.5) {
+                outD[i + 3] = 0;
+                continue;
+              }
+
+              // Several traveling wave trains — more water iterations
+              const envelope =
+                dist < 2
+                  ? 0
+                  : Math.exp(-Math.max(0, dist - travel * 0.08) * 0.008) *
+                    Math.max(0, 1 - dist / (front + wavelength * 4));
+              const phase = dist - travel;
+              const wave =
+                Math.sin(phase * ((Math.PI * 2) / wavelength)) * 1.0 +
+                Math.sin(phase * ((Math.PI * 2) / (wavelength * 0.55)) - 0.4) *
+                  0.45 +
+                Math.sin(phase * ((Math.PI * 2) / (wavelength * 1.7)) + 0.8) *
+                  0.35 +
+                Math.sin((dist - travel * 0.72) * ((Math.PI * 2) / wavelength)) *
+                  0.55;
+              const amp = amp0 * envelope;
+              const nx = dist < 0.001 ? 0 : dx / dist;
+              const ny = dist < 0.001 ? 0 : dy / dist;
+              const sx = x + nx * wave * amp;
+              const sy = y + ny * wave * amp;
+              const x0 = Math.floor(sx);
+              const y0 = Math.floor(sy);
+
+              let r = 255;
+              let g = 255;
+              let b = 255;
+              let a = 255;
+              if (x0 >= 0 && y0 >= 0 && x0 < rw - 1 && y0 < rh - 1) {
+                const fx = sx - x0;
+                const fy = sy - y0;
+                const i00 = (y0 * rw + x0) * 4;
+                const i10 = i00 + 4;
+                const i01 = i00 + rw * 4;
+                const i11 = i01 + 4;
+                const w00 = (1 - fx) * (1 - fy);
+                const w10 = fx * (1 - fy);
+                const w01 = (1 - fx) * fy;
+                const w11 = fx * fy;
+                r =
+                  srcD[i00] * w00 +
+                  srcD[i10] * w10 +
+                  srcD[i01] * w01 +
+                  srcD[i11] * w11;
+                g =
+                  srcD[i00 + 1] * w00 +
+                  srcD[i10 + 1] * w10 +
+                  srcD[i01 + 1] * w01 +
+                  srcD[i11 + 1] * w11;
+                b =
+                  srcD[i00 + 2] * w00 +
+                  srcD[i10 + 2] * w10 +
+                  srcD[i01 + 2] * w01 +
+                  srcD[i11 + 2] * w11;
+                a =
+                  srcD[i00 + 3] * w00 +
+                  srcD[i10 + 3] * w10 +
+                  srcD[i01 + 3] * w01 +
+                  srcD[i11 + 3] * w11;
+              } else {
+                const cx = Math.min(rw - 1, Math.max(0, x0));
+                const cy = Math.min(rh - 1, Math.max(0, y0));
+                const j = (cy * rw + cx) * 4;
+                r = srcD[j];
+                g = srcD[j + 1];
+                b = srcD[j + 2];
+                a = srcD[j + 3];
+              }
+
+              // Soft water edge around the expanding front
+              let alpha = a;
+              if (past > -wavelength * 2.5) {
+                const edge =
+                  1 -
+                  Math.min(
+                    1,
+                    Math.max(0, (past + wavelength * 2.5) / (wavelength * 2.2)),
+                  );
+                alpha *= edge;
+              }
+              // Crest highlight — reads more like water
+              const crest = 1 + wave * envelope * 0.1;
+
+              outD[i] = Math.min(255, r * crest);
+              outD[i + 1] = Math.min(255, g * crest);
+              outD[i + 2] = Math.min(255, b * crest);
+              outD[i + 3] = alpha;
+            }
+          }
+
+          sctx.putImageData(out, 0, 0);
+          ctx.imageSmoothingEnabled = true;
+          ctx.drawImage(small, 0, 0, w, h);
+
+          if (local < duration + 0.08) {
+            requestAnimationFrame(tick);
+          } else {
+            canvas.remove();
+            onComplete();
+          }
+        };
+
+        requestAnimationFrame(tick);
+      }
+
+      // --- ripple2: simple expanding circle from click (original circle wipe) ---
+      function runRipple2(sourceCanvas, click, onComplete) {
+        const prev = document.getElementById("shatter-layer");
+        if (prev) prev.remove();
+
+        const w = sourceCanvas.width;
+        const h = sourceCanvas.height;
+        const canvas = document.createElement("canvas");
+        canvas.id = "shatter-layer";
+        pinCanvas(canvas, w, h);
+        document.body.appendChild(canvas);
+        const ctx = canvas.getContext("2d");
+
+        const ox =
+          click && Number.isFinite(click.x)
+            ? Math.min(w, Math.max(0, click.x))
+            : w / 2;
+        const oy =
+          click && Number.isFinite(click.y)
+            ? Math.min(h, Math.max(0, click.y))
+            : h / 2;
+
+        const maxR =
+          Math.hypot(Math.max(ox, w - ox), Math.max(oy, h - oy)) + 40;
+
+        const hold = 0.04;
+        const duration = 2.4;
+        const start = performance.now();
+        ctx.drawImage(sourceCanvas, 0, 0);
+
+        const tick = (now) => {
+          const t = (now - start) / 1000;
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.globalCompositeOperation = "source-over";
+          ctx.clearRect(0, 0, w, h);
+
+          if (t < hold) {
+            ctx.drawImage(sourceCanvas, 0, 0);
+            requestAnimationFrame(tick);
+            return;
+          }
+
+          const local = t - hold;
+          const e = easeOutCubic(Math.min(1, local / duration));
+          const R = e * maxR;
+
+          ctx.drawImage(sourceCanvas, 0, 0);
+          ctx.globalCompositeOperation = "destination-out";
+          ctx.beginPath();
+          ctx.arc(ox, oy, R, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalCompositeOperation = "source-over";
+
+          if (local < duration + 0.04) {
+            requestAnimationFrame(tick);
+          } else {
+            canvas.remove();
+            onComplete();
+          }
+        };
+
+        requestAnimationFrame(tick);
+      }
+
+      // --- clock: clockwise pie wipe around the click (constant sweep) ---
+      function runClock(sourceCanvas, click, onComplete) {
+        const prev = document.getElementById("shatter-layer");
+        if (prev) prev.remove();
+
+        const w = sourceCanvas.width;
+        const h = sourceCanvas.height;
+        const canvas = document.createElement("canvas");
+        canvas.id = "shatter-layer";
+        pinCanvas(canvas, w, h);
+        document.body.appendChild(canvas);
+        const ctx = canvas.getContext("2d");
+
+        // Always pivot from screen center
+        const ox = w / 2;
+        const oy = h / 2;
+
+        const maxR =
+          Math.hypot(Math.max(ox, w - ox), Math.max(oy, h - oy)) + 60;
+        // Start from 12 o'clock; canvas angles increase clockwise
+        const startAng = -Math.PI / 2;
+
+        const hold = 0.03;
+        const duration = 1.05;
+        const start = performance.now();
+        ctx.drawImage(sourceCanvas, 0, 0);
+
+        const tick = (now) => {
+          const t = (now - start) / 1000;
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.globalCompositeOperation = "source-over";
+          ctx.clearRect(0, 0, w, h);
+
+          if (t < hold) {
+            ctx.drawImage(sourceCanvas, 0, 0);
+            requestAnimationFrame(tick);
+            return;
+          }
+
+          // Linear sweep — constant angular speed
+          const e = Math.min(1, (t - hold) / duration);
+          const endAng = startAng + e * Math.PI * 2;
+
+          ctx.drawImage(sourceCanvas, 0, 0);
+          ctx.globalCompositeOperation = "destination-out";
+          ctx.beginPath();
+          ctx.moveTo(ox, oy);
+          ctx.arc(ox, oy, maxR, startAng, endAng, false);
+          ctx.closePath();
+          ctx.fill();
+          ctx.globalCompositeOperation = "source-over";
+
+          if (e < 1) {
             requestAnimationFrame(tick);
           } else {
             canvas.remove();
@@ -541,7 +1272,6 @@
           const e = easeInCubic(Math.min(1, (t - hold) / duration));
           const angle = e * 90;
           sheet.style.transform = `rotateX(${angle}deg)`;
-          // Shade ramps up as it leaves the "lit" facing-camera pose
           shade.style.opacity = String(Math.min(1, e * 1.25));
           contact.style.opacity = String(e * 0.85);
 
@@ -556,7 +1286,396 @@
         requestAnimationFrame(tick);
       }
 
-      // --- drape: left/right panels with static folds, open outward ---
+      // --- fall2: real rigid plate (canvas-projected), push at click, tip AWAY ---
+      //
+      // Own 3D math (not CSS rotateX) so the direction can't flip by accident:
+      //   Y-up, +Z toward viewer, hinge on the slider (y=0).
+      //   +φ tips the top to -Z = away from you.
+      //   Gravity torque + click impulse; solid textured front+back.
+      //
+      function runFall2(sourceCanvas, click, onComplete) {
+        const prev = document.getElementById("shatter-layer");
+        if (prev) prev.remove();
+
+        const w = sourceCanvas.width;
+        const h = sourceCanvas.height;
+        const ox =
+          click && Number.isFinite(click.x)
+            ? Math.min(w, Math.max(0, click.x))
+            : w / 2;
+        const oy =
+          click && Number.isFinite(click.y)
+            ? Math.min(h, Math.max(0, click.y))
+            : h * 0.4;
+
+        const canvas = document.createElement("canvas");
+        canvas.id = "shatter-layer";
+        // Taller than the viewport so the plate can fall out the bottom
+        const canvasH = Math.ceil(h * 2.2);
+        canvas.width = w;
+        canvas.height = canvasH;
+        canvas.style.cssText = [
+          "position:fixed",
+          "top:0",
+          "left:0",
+          `width:${w}px`,
+          `height:${canvasH}px`,
+          "z-index:9999",
+          "pointer-events:none",
+          "display:block",
+          "margin:0",
+          "padding:0",
+          "border:0",
+        ].join(";");
+        document.body.appendChild(canvas);
+        const ctx = canvas.getContext("2d");
+
+        // Back face — solid, slightly grey so the plane never looks hollow
+        const back = document.createElement("canvas");
+        back.width = w;
+        back.height = h;
+        const bctx = back.getContext("2d");
+        bctx.fillStyle = "#e8e8e8";
+        bctx.fillRect(0, 0, w, h);
+        bctx.drawImage(sourceCanvas, 0, 0);
+        bctx.fillStyle = "rgba(0,0,0,0.18)";
+        bctx.fillRect(0, 0, w, h);
+
+        // --- rigid body (thin plate, hinge along bottom edge on the slider) ---
+        const mass = 1;
+        const H = h;
+        const I = (mass * H * H) / 3;
+        const com = H / 2;
+        const g = 3000;
+
+        // Click push into the screen (−Z). Lever = height above hinge.
+        const lever = Math.max(56, h - oy);
+        const side = (ox - w / 2) / Math.max(1, w / 2);
+        const J = 5.2 + (lever / H) * 3.8; // impulse magnitude
+        // τ = r × F with F=(0,0,−J), r=(0,lever,0) → τ_x = −lever·(−J)? 
+        // We define +φ = away; set ω from |τ|/I in the +φ direction.
+        let phi = 0.001;
+        let omega = (J * lever) / I;
+
+        // Light yaw from off-center push (rotation about vertical)
+        let yaw = 0;
+        let omegaYaw = -side * (J * 0.35 * H) / I;
+
+        let hinged = true;
+        // Free body COM in phys space (Y-up, origin at hinge rest)
+        let comX = side * 8;
+        let comY = com;
+        let comZ = 0;
+        let vx = 0;
+        let vy = 0;
+        let vz = 0;
+
+        const focal = 1100;
+
+        function rotatePoint(x, y, z, phi_, yaw_) {
+          // yaw about Y through origin, then tip about X (away: z → −y·sin)
+          const cy = Math.cos(yaw_);
+          const sy = Math.sin(yaw_);
+          let x1 = x * cy + z * sy;
+          let y1 = y;
+          let z1 = -x * sy + z * cy;
+          const cp = Math.cos(phi_);
+          const sp = Math.sin(phi_);
+          // +φ: (x, y, 0) → (x, y·cp, −y·sp)  top goes to −Z = AWAY
+          const x2 = x1;
+          const y2 = y1 * cp;
+          const z2 = z1 * cp - y1 * sp;
+          return [x2, y2, z2];
+        }
+
+        function project(x, y, z) {
+          // Perspective: objects with z<0 (away) shrink
+          const d = focal / (focal - z);
+          return {
+            x: w / 2 + x * d,
+            y: h - y * d,
+          };
+        }
+
+        // Local plate corners relative to hinge at (0,0,0), Y-up
+        // Foot centered under click: shift local X so hinge foot ≈ click
+        const footX = ox - w / 2;
+        function cornersWorld() {
+          const local = [
+            [-w / 2 - footX, 0, 0],
+            [w / 2 - footX, 0, 0],
+            [w / 2 - footX, H, 0],
+            [-w / 2 - footX, H, 0],
+          ];
+          // UVs match source image
+          const uvs = [
+            [0, h],
+            [w, h],
+            [w, 0],
+            [0, 0],
+          ];
+          const out = [];
+          for (let i = 0; i < 4; i++) {
+            let [x, y, z] = local[i];
+            if (hinged) {
+              [x, y, z] = rotatePoint(x, y, z, phi, yaw);
+              // hinge fixed at bottom center under click
+              x += footX;
+            } else {
+              // free: rotate about COM then place COM
+              x -= 0;
+              y -= com;
+              [x, y, z] = rotatePoint(x, y, z, phi, yaw);
+              x += comX;
+              y += comY;
+              z += comZ;
+            }
+            const p = project(x, y, z);
+            out.push({
+              x: p.x,
+              y: p.y,
+              z,
+              u: uvs[i][0],
+              v: uvs[i][1],
+            });
+          }
+          return out;
+        }
+
+        function drawTri(img, a, b, c) {
+          const x0 = a.u;
+          const y0 = a.v;
+          const x1 = b.u;
+          const y1 = b.v;
+          const x2 = c.u;
+          const y2 = c.v;
+          const u0 = a.x;
+          const v0 = a.y;
+          const u1 = b.x;
+          const v1 = b.y;
+          const u2 = c.x;
+          const v2 = c.y;
+          const delta = x0 * (y1 - y2) + x1 * (y2 - y0) + x2 * (y0 - y1);
+          if (Math.abs(delta) < 1e-4) return;
+          const ma = (u0 * (y1 - y2) + u1 * (y2 - y0) + u2 * (y0 - y1)) / delta;
+          const mb = (u0 * (x2 - x1) + u1 * (x0 - x2) + u2 * (x1 - x0)) / delta;
+          const mc =
+            (u0 * (x1 * y2 - x2 * y1) +
+              u1 * (x2 * y0 - x0 * y2) +
+              u2 * (x0 * y1 - x1 * y0)) /
+            delta;
+          const md = (v0 * (y1 - y2) + v1 * (y2 - y0) + v2 * (y0 - y1)) / delta;
+          const me = (v0 * (x2 - x1) + v1 * (x0 - x2) + v2 * (x1 - x0)) / delta;
+          const mf =
+            (v0 * (x1 * y2 - x2 * y1) +
+              v1 * (x2 * y0 - x0 * y2) +
+              v2 * (x0 * y1 - x1 * y0)) /
+            delta;
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(u0, v0);
+          ctx.lineTo(u1, v1);
+          ctx.lineTo(u2, v2);
+          ctx.closePath();
+          ctx.clip();
+          ctx.setTransform(ma, md, mb, me, mc, mf);
+          ctx.drawImage(img, 0, 0);
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.restore();
+        }
+
+        function facingFront(c) {
+          // Cross of edges in screen space — or use average z normal
+          // Phys normal starts +Z; after tip about X: n = (0, sinφ, cosφ) roughly
+          // Front faces viewer when nz > 0
+          const cp = Math.cos(phi);
+          const sp = Math.sin(phi);
+          // normal (0,0,1) → after away tip: (0, sp, cp) in our R? 
+          // R maps (0,0,1): from rotatePoint logic z2 = z*cp - y*sp, y2 = y*cp
+          // normal transform: (0, sinφ, cosφ) for away tip — viewer sees front while cosφ>0
+          return Math.cos(phi) * Math.cos(yaw) > 0;
+        }
+
+        let last = performance.now();
+        const t0 = last;
+
+        const tick = (now) => {
+          let dt = (now - last) / 1000;
+          last = now;
+          dt = Math.min(0.033, Math.max(0.001, dt));
+          // Substep for stability
+          const steps = 2;
+          const hdt = dt / steps;
+          for (let s = 0; s < steps; s++) {
+            if (hinged) {
+              const tau = mass * g * com * Math.sin(phi);
+              const alpha = tau / I;
+              omega += alpha * hdt;
+              omega *= 1 - 0.12 * hdt;
+              phi += omega * hdt;
+              omegaYaw *= 1 - 0.5 * hdt;
+              yaw += omegaYaw * hdt;
+
+              if (phi > (95 * Math.PI) / 180) {
+                hinged = false;
+                // COM world position at release
+                const [_, cy, cz] = rotatePoint(0, com, 0, phi, yaw);
+                comX = footX;
+                comY = cy;
+                comZ = cz;
+                // Velocity of COM ≈ ω × r
+                const tip = omega * com;
+                vz = -Math.abs(Math.cos(phi)) * tip - Math.abs(omega) * com * 0.3;
+                vy = -Math.sin(phi) * tip;
+                vx = side * Math.abs(tip) * 0.25;
+              }
+            } else {
+              vy -= g * hdt;
+              vz -= 30 * hdt;
+              comX += vx * hdt;
+              comY += vy * hdt;
+              comZ += vz * hdt;
+              omega *= 1 - 0.06 * hdt;
+              phi += omega * hdt;
+              yaw += omegaYaw * hdt;
+            }
+          }
+
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.clearRect(0, 0, w, canvasH);
+
+          const c = cornersWorld();
+          // Painter: if back facing, draw back first feel — pick texture by facing
+          const front = facingFront(c);
+          const img = front ? sourceCanvas : back;
+          // Average depth sort of two tris
+          const t1 = [c[0], c[1], c[2]];
+          const t2 = [c[0], c[2], c[3]];
+          const z1 = (t1[0].z + t1[1].z + t1[2].z) / 3;
+          const z2 = (t2[0].z + t2[1].z + t2[2].z) / 3;
+          const order = z1 < z2 ? [t1, t2] : [t2, t1];
+          // For back face, UV flip horizontally so it doesn't look mirrored wrong
+          if (!front) {
+            order.forEach((tri) => {
+              // back canvas already darkened; draw as-is
+              drawTri(img, tri[0], tri[1], tri[2]);
+            });
+          } else {
+            order.forEach((tri) => drawTri(img, tri[0], tri[1], tri[2]));
+          }
+
+          // Soft contact shadow on the slider while hinged
+          if (hinged && phi < Math.PI / 2) {
+            const a = Math.min(0.35, 0.08 + phi * 0.25);
+            ctx.save();
+            ctx.globalAlpha = a;
+            ctx.fillStyle = "#000";
+            ctx.beginPath();
+            ctx.ellipse(ox, h - 4, 80 + phi * 40, 10 + phi * 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+
+          const done =
+            now - t0 > 3200 ||
+            comY < -H * 0.6 ||
+            ( !hinged && comZ < -H * 1.2) ||
+            phi > Math.PI * 1.2;
+
+          if (!done) requestAnimationFrame(tick);
+          else {
+            canvas.remove();
+            onComplete();
+          }
+        };
+
+        requestAnimationFrame(tick);
+      }
+
+      // --- shrink: viewport scales into the click at constant speed (no fade) ---
+      function runShrink(sourceCanvas, click, onComplete) {
+        const prev = document.getElementById("shatter-layer");
+        if (prev) prev.remove();
+
+        const w = sourceCanvas.width;
+        const h = sourceCanvas.height;
+        const ox =
+          click && Number.isFinite(click.x)
+            ? Math.min(w, Math.max(0, click.x))
+            : w / 2;
+        const oy =
+          click && Number.isFinite(click.y)
+            ? Math.min(h, Math.max(0, click.y))
+            : h / 2;
+
+        const stage = document.createElement("div");
+        stage.id = "shatter-layer";
+        stage.style.cssText = [
+          "position:fixed",
+          "top:0",
+          "left:0",
+          `width:${w}px`,
+          `height:${h}px`,
+          "z-index:9999",
+          "pointer-events:none",
+          "overflow:visible",
+          "background:transparent",
+        ].join(";");
+
+        const sheet = document.createElement("div");
+        sheet.style.cssText = [
+          "position:relative",
+          `width:${w}px`,
+          `height:${h}px`,
+          `transform-origin:${ox}px ${oy}px`,
+          "transform:scale(1)",
+          "will-change:transform",
+          "opacity:1",
+        ].join(";");
+
+        const face = document.createElement("canvas");
+        face.width = w;
+        face.height = h;
+        face.getContext("2d").drawImage(sourceCanvas, 0, 0);
+        face.style.cssText = [
+          `width:${w}px`,
+          `height:${h}px`,
+          "display:block",
+        ].join(";");
+
+        sheet.appendChild(face);
+        stage.appendChild(sheet);
+        document.body.appendChild(stage);
+
+        const hold = 0.02;
+        const duration = 0.7;
+        const start = performance.now();
+
+        const tick = (now) => {
+          const t = (now - start) / 1000;
+          if (t < hold) {
+            requestAnimationFrame(tick);
+            return;
+          }
+
+          // Linear — constant shrink speed, no fade
+          const e = Math.min(1, (t - hold) / duration);
+          const s = 1 - e;
+          sheet.style.transform = `scale(${s})`;
+          sheet.style.opacity = "1";
+
+          if (e < 1) {
+            requestAnimationFrame(tick);
+          } else {
+            stage.remove();
+            onComplete();
+          }
+        };
+
+        requestAnimationFrame(tick);
+      }
+
+      // --- drape: left/right panels — two bursts (ease to stop), then exit ---
       function runDrape(sourceCanvas, _click, onComplete) {
         const prev = document.getElementById("shatter-layer");
         if (prev) prev.remove();
@@ -578,12 +1697,11 @@
           "pointer-events:none",
           "perspective:1800px",
           "perspective-origin:50% 50%",
-          "overflow:hidden",
+          "overflow:visible",
           "background:transparent",
         ].join(";");
 
         function makeSide(side) {
-          // side: "left" | "right"
           const panel = document.createElement("div");
           panel.style.cssText = [
             "position:absolute",
@@ -600,8 +1718,6 @@
           const strips = [];
 
           for (let i = 0; i < foldsPerSide; i++) {
-            // Left panel: folds from outer→center (0 at left edge)
-            // Right panel: folds from center→outer visually; index 0 at center
             const srcX =
               side === "left" ? i * foldW : mid + i * foldW;
 
@@ -621,9 +1737,8 @@
               h,
             );
 
-            // Pleat shade — alternate dark/light for fold valleys & peaks
-            const shade = document.createElement("div");
             const valley = i % 2 === 0;
+            const shade = document.createElement("div");
             shade.style.cssText = [
               "position:absolute",
               "inset:0",
@@ -650,7 +1765,6 @@
             wrap.appendChild(shade);
             panel.appendChild(wrap);
 
-            // Distance from the center split (0 at seam, 1 at outer edge)
             const fromCenter =
               side === "left"
                 ? (foldsPerSide - 1 - i) / (foldsPerSide - 1)
@@ -660,7 +1774,6 @@
               wrap,
               side,
               fromCenter,
-              // Accordion fold angle direction
               foldSign: valley ? 1 : -1,
             });
           }
@@ -674,8 +1787,8 @@
         stage.appendChild(right.panel);
         document.body.appendChild(stage);
 
-        const hold = 0.06;
-        const duration = 1.55;
+        const hold = 0.05;
+        const duration = 2.1;
         const start = performance.now();
 
         const tick = (now) => {
@@ -685,24 +1798,19 @@
             return;
           }
 
-          const e = easeInOutCubic(Math.min(1, (t - hold) / duration));
+          const raw = Math.min(1, (t - hold) / duration);
+          const e = drapeOpen(raw);
 
-          // Panels slide fully off their sides
-          const travel = mid + 40;
+          const travel = mid + 80;
           left.panel.style.transform = `translateX(${-travel * e}px)`;
           right.panel.style.transform = `translateX(${travel * e}px)`;
 
-          // Folds: gather near the leading (outer) edge as curtains open,
-          // with a soft wave from the center seam outward
           [...left.strips, ...right.strips].forEach((strip) => {
             const wave = Math.sin(strip.fromCenter * Math.PI);
-            // Early in the motion folds deepen, then flatten as fabric exits
             const foldAmp =
               Math.sin(e * Math.PI) * (22 + strip.fromCenter * 18);
             const rotateY = strip.foldSign * foldAmp * (0.35 + wave * 0.65);
-            // Slight depth so folds read in perspective
             const z = Math.abs(Math.sin((rotateY * Math.PI) / 180)) * -28;
-            // Outer folds lead a touch (curtain peels from the split)
             const lead = (1 - strip.fromCenter) * 0.08;
             const localE = Math.min(1, Math.max(0, e + lead));
             const scaleX = 1 - localE * 0.12 * wave;
@@ -710,7 +1818,7 @@
             strip.wrap.style.transform = `translateZ(${z}px) rotateY(${rotateY}deg) scaleX(${scaleX})`;
           });
 
-          if (t < hold + duration) {
+          if (raw < 1) {
             requestAnimationFrame(tick);
           } else {
             stage.remove();
@@ -721,7 +1829,7 @@
         requestAnimationFrame(tick);
       }
 
-      // --- curtain: real canvas cloth (Verlet) left/right, pulled open ---
+      // --- curtain: Verlet cloth — thirds open, mesh seams hidden ---
       function runCurtain(sourceCanvas, _click, onComplete) {
         const prev = document.getElementById("shatter-layer");
         if (prev) prev.remove();
@@ -729,6 +1837,7 @@
         const w = sourceCanvas.width;
         const h = sourceCanvas.height;
         const mid = w / 2;
+        const renderScale = 2;
 
         const canvas = document.createElement("canvas");
         canvas.id = "shatter-layer";
@@ -736,23 +1845,41 @@
         document.body.appendChild(canvas);
         const ctx = canvas.getContext("2d");
 
-        // Texture-map one triangle of the screenshot onto screen verts
-        function drawTexturedTriangle(d0, d1, d2, s0, s1, s2, shade) {
+        const off = document.createElement("canvas");
+        off.width = Math.ceil(w * renderScale);
+        off.height = Math.ceil(h * renderScale);
+        const octx = off.getContext("2d");
+
+        function drawTexturedTriangle(d0, d1, d2, s0, s1, s2) {
+          // Expand clip slightly so adjacent tris overlap (kills hairline mesh)
+          const cx = (d0.x + d1.x + d2.x) / 3;
+          const cy = (d0.y + d1.y + d2.y) / 3;
+          const pad = 1.15 * renderScale;
+          const grow = (d) => {
+            const dx = d.x - cx;
+            const dy = d.y - cy;
+            const len = Math.hypot(dx, dy) || 1;
+            return { x: d.x + (dx / len) * pad, y: d.y + (dy / len) * pad };
+          };
+          const a = grow(d0);
+          const b = grow(d1);
+          const c = grow(d2);
+
           const denom =
             s0.u * (s1.v - s2.v) +
             s1.u * (s2.v - s0.v) +
             s2.u * (s0.v - s1.v);
           if (Math.abs(denom) < 1e-5) return;
 
-          ctx.save();
-          ctx.beginPath();
-          ctx.moveTo(d0.x, d0.y);
-          ctx.lineTo(d1.x, d1.y);
-          ctx.lineTo(d2.x, d2.y);
-          ctx.closePath();
-          ctx.clip();
+          octx.save();
+          octx.beginPath();
+          octx.moveTo(a.x, a.y);
+          octx.lineTo(b.x, b.y);
+          octx.lineTo(c.x, c.y);
+          octx.closePath();
+          octx.clip();
 
-          // Affine map from source (u,v) → dest (x,y)
+          // Affine from original verts (not expanded) so UVs stay correct
           const m11 =
             (d0.x * (s1.v - s2.v) +
               d1.x * (s2.v - s0.v) +
@@ -784,61 +1911,46 @@
               d2.y * (s0.u * s1.v - s1.u * s0.v)) /
             denom;
 
-          ctx.setTransform(m11, m21, m12, m22, m13, m23);
-          ctx.drawImage(sourceCanvas, 0, 0);
-          ctx.restore();
-
-          if (shade > 0.01) {
-            ctx.save();
-            ctx.beginPath();
-            ctx.moveTo(d0.x, d0.y);
-            ctx.lineTo(d1.x, d1.y);
-            ctx.lineTo(d2.x, d2.y);
-            ctx.closePath();
-            ctx.fillStyle = `rgba(0,0,0,${Math.min(0.55, shade)})`;
-            ctx.fill();
-            ctx.restore();
-          }
+          octx.setTransform(m11, m21, m12, m22, m13, m23);
+          octx.drawImage(sourceCanvas, 0, 0);
+          octx.restore();
         }
 
         function makeCloth(x0, x1) {
-          // One clean image pass + surplus fabric → normal hanging pleats
+          // Soft hanging pleats (surplus fabric) — the good folds
           const cols = 18;
           const rows = 15;
           const panelW = x1 - x0;
           const pleats = 6;
           const vStep = h / (rows - 1);
-          // Horizontal rest longer than pin spacing → cloth bunches into folds
-          const restH = (panelW * 1.35) / (cols - 1);
+          const restH = (panelW * 1.28) / (cols - 1);
           const particles = [];
 
           for (let j = 0; j < rows; j++) {
             const depth = j / (rows - 1);
             for (let i = 0; i < cols; i++) {
               const t = i / (cols - 1);
-              // UV: single left→right pass over this half of the screenshot
               const u = x0 + t * panelW;
               const v = j * vStep;
-              // Soft vertical pleats (no backtracking — avoids duplicated viewport)
               const pleat = Math.sin(t * pleats * Math.PI);
-              const x = x0 + t * panelW + pleat * (panelW / pleats) * 0.22 * (0.25 + 0.75 * depth);
-              const y = v;
+              const x =
+                x0 +
+                t * panelW +
+                pleat * (panelW / pleats) * 0.18 * (0.25 + 0.75 * depth);
               particles.push({
                 x,
-                y,
+                y: v,
                 ox: x,
-                oy: y,
+                oy: v,
                 px: x,
-                py: y,
+                py: v,
                 pinned: j === 0,
                 u,
                 v,
-                valley: (1 - Math.abs(pleat)) * 0.5 + (pleat < 0 ? 0.35 : 0),
               });
             }
           }
 
-          // Top pins evenly on the rail (compressed vs restH → folds hang)
           for (let i = 0; i < cols; i++) {
             const p = particles[i];
             const t = i / (cols - 1);
@@ -855,11 +1967,7 @@
           for (let j = 0; j < rows; j++) {
             for (let i = 0; i < cols; i++) {
               if (i < cols - 1) {
-                springs.push({
-                  a: idx(i, j),
-                  b: idx(i + 1, j),
-                  len: restH,
-                });
+                springs.push({ a: idx(i, j), b: idx(i + 1, j), len: restH });
               }
               if (j < rows - 1) {
                 const a = particles[idx(i, j)];
@@ -879,19 +1987,32 @@
         const left = makeCloth(0, mid);
         const right = makeCloth(mid, w);
 
-        const gravity = 0.4;
-        const damp = 0.982;
-        const settleFrames = 32;
-        const openDuration = 1.7;
+        const gravity = 0.38;
+        const damp = 0.978;
+        const settleFrames = 28;
+        const hold = 0.35;
+        const duration = 4.0;
+        const travel = mid + 40;
         const start = performance.now();
+        let smoothOpen = 0;
+        let lastOpenE = 0;
 
         function stepCloth(cloth, pullDir, openE) {
           const { particles, springs } = cloth;
+          // Extra drag when nearly still → kills jittery glitch folds on pauses
+          const moving = Math.abs(openE - lastOpenE);
+          const localDamp = moving < 0.0008 ? 0.92 : damp;
 
           for (let p of particles) {
             if (p.pinned) continue;
-            const vx = (p.x - p.px) * damp;
-            const vy = (p.y - p.py) * damp;
+            let vx = (p.x - p.px) * localDamp;
+            let vy = (p.y - p.py) * localDamp;
+            // Clamp velocity so mesh can't invert into glitch folds
+            const spd = Math.hypot(vx, vy);
+            if (spd > 14) {
+              vx = (vx / spd) * 14;
+              vy = (vy / spd) * 14;
+            }
             p.px = p.x;
             p.py = p.y;
             p.x += vx;
@@ -902,20 +2023,25 @@
                 pullDir < 0
                   ? (p.u - cloth.x0) / Math.max(1, cloth.x1 - cloth.x0)
                   : (cloth.x1 - p.u) / Math.max(1, cloth.x1 - cloth.x0);
-              const force = (0.5 + seamness * 2.3) * openE * openE;
+              const force = (0.35 + seamness * 1.4) * openE * openE;
               p.x += pullDir * force;
-              p.y -= openE * 0.08 * seamness;
+              p.y -= openE * 0.05 * seamness;
             }
           }
 
-          for (let k = 0; k < 4; k++) {
+          for (let k = 0; k < 5; k++) {
             for (let s of springs) {
               const a = particles[s.a];
               const b = particles[s.b];
               const dx = b.x - a.x;
               const dy = b.y - a.y;
               const dist = Math.hypot(dx, dy) || 0.0001;
-              const diff = ((dist - s.len) / dist) * 0.5;
+              // Cap stretch so cells can't collapse into glitches
+              const maxLen = s.len * 1.55;
+              const minLen = s.len * 0.45;
+              const target = Math.min(maxLen, Math.max(minLen, s.len));
+              const use = dist > maxLen || dist < minLen ? target : s.len;
+              const diff = ((dist - use) / dist) * 0.5;
               const offX = dx * diff;
               const offY = dy * diff;
               if (!a.pinned) {
@@ -929,8 +2055,7 @@
             }
           }
 
-          // Rail slides outward; pins stay evenly spaced (folds live in hanging cloth)
-          const railShift = pullDir * openE * (mid + 80);
+          const railShift = pullDir * openE * travel;
           for (let i = 0; i < cloth.cols; i++) {
             const p = particles[cloth.idx(i, 0)];
             p.x = p.ox + railShift;
@@ -940,8 +2065,13 @@
           }
         }
 
+        function triArea(a, b, c) {
+          return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+        }
+
         function drawCloth(cloth) {
           const { cols, rows, particles, idx } = cloth;
+          const s = renderScale;
           for (let j = 0; j < rows - 1; j++) {
             for (let i = 0; i < cols - 1; i++) {
               const p00 = particles[idx(i, j)];
@@ -949,30 +2079,32 @@
               const p01 = particles[idx(i, j + 1)];
               const p11 = particles[idx(i + 1, j + 1)];
 
-              const restW = Math.hypot(p10.ox - p00.ox, p10.oy - p00.oy) || 1;
-              const nowW = Math.hypot(p10.x - p00.x, p10.y - p00.y);
-              const compress = Math.max(0, 1 - nowW / restW);
-              const shade =
-                compress * 0.45 + ((p00.valley + p10.valley) * 0.5) * 0.25;
+              const d00 = { x: p00.x * s, y: p00.y * s };
+              const d10 = { x: p10.x * s, y: p10.y * s };
+              const d01 = { x: p01.x * s, y: p01.y * s };
+              const d11 = { x: p11.x * s, y: p11.y * s };
 
-              drawTexturedTriangle(
-                { x: p00.x, y: p00.y },
-                { x: p10.x, y: p10.y },
-                { x: p11.x, y: p11.y },
-                { u: p00.u, v: p00.v },
-                { u: p10.u, v: p10.v },
-                { u: p11.u, v: p11.v },
-                shade,
-              );
-              drawTexturedTriangle(
-                { x: p00.x, y: p00.y },
-                { x: p11.x, y: p11.y },
-                { x: p01.x, y: p01.y },
-                { u: p00.u, v: p00.v },
-                { u: p11.u, v: p11.v },
-                { u: p01.u, v: p01.v },
-                shade * 0.9,
-              );
+              // Skip collapsed / flipped tris — those flash as glitch folds
+              if (Math.abs(triArea(d00, d10, d11)) > 0.5) {
+                drawTexturedTriangle(
+                  d00,
+                  d10,
+                  d11,
+                  { u: p00.u, v: p00.v },
+                  { u: p10.u, v: p10.v },
+                  { u: p11.u, v: p11.v },
+                );
+              }
+              if (Math.abs(triArea(d00, d11, d01)) > 0.5) {
+                drawTexturedTriangle(
+                  d00,
+                  d11,
+                  d01,
+                  { u: p00.u, v: p00.v },
+                  { u: p11.u, v: p11.v },
+                  { u: p01.u, v: p01.v },
+                );
+              }
             }
           }
         }
@@ -981,28 +2113,38 @@
           stepCloth(left, -1, 0);
           stepCloth(right, 1, 0);
         }
+        lastOpenE = 0;
 
         const tick = (now) => {
           const t = (now - start) / 1000;
-          const openE = easeInOutCubic(
-            Math.min(1, Math.max(0, (t - 0.15) / openDuration)),
-          );
-
-          stepCloth(left, -1, openE);
-          stepCloth(right, 1, openE);
+          const raw = t < hold ? 0 : Math.min(1, (t - hold) / duration);
+          const target = curtainOpen(raw);
+          const catchUp = Math.abs(target - smoothOpen) < 0.002 ? 1 : 0.12;
+          smoothOpen += (target - smoothOpen) * catchUp;
+          if (target === 0) smoothOpen = 0;
+          const openE = smoothOpen;
 
           ctx.setTransform(1, 0, 0, 1, 0, 0);
           ctx.clearRect(0, 0, w, h);
-          drawCloth(left);
-          drawCloth(right);
 
-          if (openE < 0.95) {
-            const alpha = (1 - openE) * 0.28;
-            ctx.fillStyle = `rgba(0,0,0,${alpha})`;
-            ctx.fillRect(mid - 4, 0, 8, h);
+          if (openE <= 0.001) {
+            ctx.drawImage(sourceCanvas, 0, 0);
+          } else {
+            stepCloth(left, -1, openE);
+            stepCloth(right, 1, openE);
+            lastOpenE = openE;
+
+            octx.setTransform(1, 0, 0, 1, 0, 0);
+            octx.clearRect(0, 0, off.width, off.height);
+            drawCloth(left);
+            drawCloth(right);
+
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
+            ctx.drawImage(off, 0, 0, w, h);
           }
 
-          if (t < openDuration + 0.4) {
+          if (raw < 1 || Math.abs(target - smoothOpen) > 0.002) {
             requestAnimationFrame(tick);
           } else {
             canvas.remove();
@@ -1157,10 +2299,16 @@
       const TRANSITION_RUNNERS = {
         shatter: runShatter,
         crumble: runCrumble,
+        crumble2: runCrumble2,
         fall: runFall,
+        fall2: runFall2,
+        shrink: runShrink,
         drape: runDrape,
         curtain: runCurtain,
         flip: runFlip,
+        ripple: runRipple,
+        ripple2: runRipple2,
+        clock: runClock,
       };
 
       async function transitionTo({ type, click, onReveal, onDone }) {
@@ -1238,232 +2386,241 @@
       // ---------------------------------------------------------
       // UI
       // ---------------------------------------------------------
-      const TransitionPicker = ({ type, onChange, locked }) => (
-        <div className="fixed bottom-16 left-4 z-50 flex flex-col gap-1 pointer-events-none text-[0.7rem] leading-none opacity-50">
-          {TRANSITION_TYPES.map((name) => (
+      const TransitionPicker = ({ type, onChange, locked, types }) => (
+        <div className="fixed bottom-14 left-2 z-[10002] flex flex-col gap-0 pointer-events-none text-[11px] leading-tight font-y2k">
+          <span className="text-y2k-yellow bg-black px-1 mb-1 w-fit">fx:</span>
+          {(types || TRANSITION_TYPES).map((name) => (
             <button
               key={name}
               type="button"
               disabled={locked}
               onClick={() => onChange(name)}
-              className={`pointer-events-auto text-left neon-hover disabled:pointer-events-none ${
-                type === name ? "underline underline-offset-4" : "opacity-50"
+              className={`pointer-events-auto text-left y2k-link disabled:pointer-events-none bg-y2k-silver/90 px-1 ${
+                type === name ? "active" : ""
               }`}
             >
-              {name}
+              {type === name ? `► ${name}` : name}
             </button>
           ))}
         </div>
       );
 
       const CartBar = ({ count, onHome, onCart, locked }) => (
-        <header className="fixed top-0 left-0 right-0 z-50 flex items-start justify-between px-4 pt-4 md:px-8 md:pt-6 pointer-events-none">
+        <header className="w-full bg-[#000080] text-y2k-yellow px-2 py-1 flex items-center justify-between font-anell text-anell leading-none border-b border-black">
           <button
             type="button"
             disabled={locked}
             onClick={onHome}
-            className="pointer-events-auto text-anell leading-none neon-hover disabled:pointer-events-none"
+            className="pointer-events-auto text-y2k-yellow underline disabled:pointer-events-none hover:text-white"
           >
-            anell
+            ★ anell ★
           </button>
           <button
             type="button"
             disabled={locked}
             onClick={onCart}
-            className="pointer-events-auto text-anell leading-none neon-hover disabled:pointer-events-none"
+            className="pointer-events-auto text-y2k-yellow underline disabled:pointer-events-none hover:text-white text-[1.1rem]"
           >
             cart ({count})
           </button>
         </header>
       );
 
-      const Marquee = ({ paused, reverseKick }) => {
-        const trackRef = React.useRef(null);
-        const offsetRef = React.useRef(0);
-        const velRef = React.useRef(0);
-        const cruiseRef = React.useRef(-1); // sign: -1 left, +1 right
-        const modeRef = React.useRef("cruise"); // cruise | stall | engine
-        const engineTRef = React.useRef(0);
-        const speedRef = React.useRef(0.8);
-
-        // Stop immediately on click / while transition runs
-        React.useEffect(() => {
-          if (!paused) return;
-          modeRef.current = "stall";
-          velRef.current = 0;
-        }, [paused]);
-
-        // After transition: stay still 0.3s, then soft reverse
-        React.useEffect(() => {
-          if (!reverseKick) return;
-          modeRef.current = "stall";
-          velRef.current = 0;
-          const timer = setTimeout(() => {
-            cruiseRef.current *= -1;
-            modeRef.current = "engine";
-            engineTRef.current = 0;
-          }, 300);
-          return () => clearTimeout(timer);
-        }, [reverseKick]);
-
-        React.useEffect(() => {
-          let raf = 0;
-          const tick = () => {
-            const track = trackRef.current;
-            if (track) {
-              const half = track.scrollWidth / 2 || 1;
-              speedRef.current = Math.max(0.35, half / (120 * 60));
-
-              if (modeRef.current === "stall") {
-                velRef.current = 0;
-              } else if (modeRef.current === "engine") {
-                engineTRef.current += 1;
-                const t = engineTRef.current;
-                const duration = 110; // ~1.8s soft catch
-                const p = Math.min(1, t / duration);
-                const ease = p * p * (3 - 2 * p); // smoothstep
-                const target = cruiseRef.current * speedRef.current;
-
-                // Soft engine: gentle pulses + tiny wobble that fades out
-                const pulse = 0.65 + 0.35 * Math.sin(t * 0.18);
-                const wobble =
-                  Math.sin(t * 0.45) * (1 - ease) * speedRef.current * 0.55;
-                velRef.current = target * ease * pulse + wobble;
-
-                if (t >= duration) {
-                  velRef.current = target;
-                  modeRef.current = "cruise";
-                }
-              } else {
-                const target = cruiseRef.current * speedRef.current;
-                velRef.current += (target - velRef.current) * 0.06;
-              }
-
-              offsetRef.current += velRef.current;
-              while (offsetRef.current <= -half) offsetRef.current += half;
-              while (offsetRef.current > 0) offsetRef.current -= half;
-
-              track.style.transform = `translate3d(${offsetRef.current}px,0,0)`;
-            }
-            raf = requestAnimationFrame(tick);
-          };
-          raf = requestAnimationFrame(tick);
-          return () => cancelAnimationFrame(raf);
-        }, []);
-
-        return (
-          <footer
-            id="site-marquee"
-            className="fixed bottom-0 left-0 w-full overflow-hidden bg-white z-[10001] py-2 pointer-events-none"
-          >
-            <div
-              ref={trackRef}
-              className="animate-marquee whitespace-nowrap flex items-center text-anell leading-none"
-            >
-              {[...Array(60)].map((_, i) => (
-                <div key={i} className="flex items-center">
-                  <span>
-                    {i % 2 === 0
-                      ? "each ring is unique and comes with its own set of flaws"
-                      : "click -> shop"}
-                  </span>
-                  <span className="mx-[1ch]">|</span>
-                </div>
-              ))}
-            </div>
-          </footer>
-        );
-      };
-
       const ImageGrid = ({ onSelect, locked }) => (
-        <main className="min-h-screen w-full pt-24 pb-28 px-1 md:px-2">
-          <div className="flex flex-col gap-16 md:gap-24">
-            {ROWS.map((row, rowIndex) => (
-              <div
-                key={rowIndex}
-                className="grid grid-cols-1 md:grid-cols-3 gap-1 items-start"
+        <main className="w-full h-full min-h-full py-4 px-2 flex flex-col">
+          <p className="text-center text-y2k-navy font-y2k text-sm mb-2 flex items-center justify-center gap-2 flex-wrap">
+            <span className="y2k-blink text-red-600 font-bold">new!</span>
+            <span>handmade rings · est. 2001</span>
+            <span className="y2k-blink text-red-600 font-bold">new!</span>
+          </p>
+          <hr className="y2k-hr" />
+          <div className="grid grid-cols-2 gap-6 py-2 px-2">
+            {PRODUCTS.map((product) => (
+              <button
+                key={product.id}
+                type="button"
+                disabled={locked}
+                onClick={(e) => onSelect(product, e)}
+                className="group flex w-full flex-col items-stretch gap-2 bg-transparent text-left disabled:pointer-events-none"
               >
-                {row.map((product) => (
-                  <button
-                    key={product.id}
-                    type="button"
-                    disabled={locked}
-                    onClick={(e) => onSelect(product, e)}
-                    className="group flex w-full flex-col items-stretch gap-0 bg-white text-left disabled:pointer-events-none"
-                  >
-                    <img
-                      src={product.src}
-                      alt={product.alt}
-                      className="block w-full h-auto object-contain object-top transition-opacity duration-500 group-hover:opacity-80"
-                    />
-                    <span className="block text-center leading-none transition-colors duration-200 group-hover:text-[#ff2ecb]">
-                      {product.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
+                <img
+                  src={`./gallery/lofi/${String(product.id).padStart(2, "0")}.jpg`}
+                  alt={product.alt}
+                  className="y2k-photo border border-black"
+                />
+                <span className="y2k-link text-base leading-tight text-left w-full group-hover:text-[#ff00ff]">
+                  {product.label}
+                </span>
+              </button>
             ))}
+          </div>
+          <div className="mt-auto">
+            <hr className="y2k-hr" />
+            <p className="text-center font-y2k text-xs text-black mt-2">
+              © 2001–2003 anell web shop · no rights reserved ·{" "}
+              <span className="text-y2k-link underline">guestbook</span>
+            </p>
           </div>
         </main>
       );
 
+      const VariantModal = ({ size, locked, onPick, onClose }) => (
+        <div
+          className="fixed inset-0 z-[10050] flex items-center justify-center bg-y2k-navy/80 px-4"
+          onClick={onClose}
+        >
+          <div
+            className="flex w-full max-w-xl flex-col gap-4 border border-black bg-y2k-face p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-center font-anell text-anell text-y2k-navy bg-y2k-yellow border border-black py-1">
+              size {size} · choose type
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              {RING_VARIANTS.map((v) => (
+                <button
+                  key={v.id}
+                  type="button"
+                  disabled={locked}
+                  onClick={() => onPick(v)}
+                  className="group flex flex-col items-center gap-2 disabled:pointer-events-none"
+                >
+                  <img
+                    src={v.src}
+                    alt={v.name}
+                    className="block w-full h-auto object-contain border border-black"
+                  />
+                  <span className="y2k-link">{v.name}</span>
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              disabled={locked}
+              onClick={onClose}
+              className="y2k-btn mx-auto disabled:pointer-events-none"
+            >
+              close
+            </button>
+          </div>
+        </div>
+      );
+
       const ProductPage = ({ product, onAdd, locked }) => {
-        const [selectedSize, setSelectedSize] = React.useState(null);
+        const pack = product.pack || 1;
+        const [picks, setPicks] = React.useState([]);
+        const [pendingSize, setPendingSize] = React.useState(null);
+
+        const packLabel =
+          pack === 1 ? "one ring" : `pack of ${pack}`;
+
+        const handleVariantPick = (variant) => {
+          if (pendingSize == null) return;
+          setPicks((prev) => {
+            if (prev.length >= pack) return prev;
+            return [
+              ...prev,
+              {
+                size: pendingSize,
+                variant: variant.name,
+                variantId: variant.id,
+              },
+            ];
+          });
+          setPendingSize(null);
+        };
 
         const handleAdd = () => {
-          if (!selectedSize) return;
-          onAdd(selectedSize);
+          if (picks.length !== pack) return;
+          onAdd({ pack, picks });
+        };
+
+        const slotLabel = (i) => {
+          const p = picks[i];
+          if (!p) return `ring ${i + 1} · choose size`;
+          return `ring ${i + 1} · ${p.variant} · size ${p.size}`;
         };
 
         return (
-          <main className="w-full pt-24 pb-32 px-4 md:px-8">
-            <div className="mx-auto w-full max-w-xl flex flex-col gap-6">
+          <main className="w-full py-4 px-2">
+            <div className="mx-auto w-full max-w-2xl flex flex-col gap-4 p-4">
               <img
                 src={product.src}
                 alt={product.alt}
-                className="block w-full h-auto object-contain"
+                className="block w-full h-auto object-contain border border-black mx-auto"
               />
 
-              <div className="flex flex-col gap-4">
-                <p>{product.name}</p>
-                <p>{product.label}</p>
+              <hr className="y2k-hr" />
 
-                <div className="flex flex-wrap gap-x-4 gap-y-2">
-                  {SIZES.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      disabled={locked}
-                      onClick={() => setSelectedSize(s)}
-                      className={`neon-hover disabled:pointer-events-none ${
-                        selectedSize === s ? "text-[#ff2ecb]" : "opacity-50"
-                      }`}
+              <div className="flex flex-col gap-3 font-y2k text-base text-black">
+                <p className="font-anell text-anell text-y2k-navy text-center bg-y2k-yellow border border-black py-1">
+                  {packLabel}
+                </p>
+
+                <p className="font-bold text-y2k-navy">1. your rings:</p>
+                <div className="flex flex-col gap-1 border border-black p-2 bg-[#ffffcc]">
+                  {Array.from({ length: pack }).map((_, i) => (
+                    <p
+                      key={i}
+                      className={picks[i] ? "text-black" : "text-gray-500"}
                     >
-                      {s}
-                    </button>
+                      · {slotLabel(i)}
+                    </p>
                   ))}
                 </div>
 
+                {picks.length < pack && (
+                  <>
+                    <p className="font-bold text-y2k-navy">2. pick a size:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {SIZES.map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          disabled={locked}
+                          onClick={() => setPendingSize(s)}
+                          className="y2k-btn disabled:pointer-events-none"
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+
                 <button
                   type="button"
-                  disabled={locked || !selectedSize}
+                  disabled={locked || picks.length !== pack}
                   onClick={handleAdd}
-                  className="neon-hover text-left disabled:pointer-events-none disabled:opacity-40"
+                  className="y2k-btn mt-2 bg-y2k-lime disabled:pointer-events-none disabled:opacity-40 text-left w-fit"
                 >
-                  {selectedSize
-                    ? `add to cart · 30.-`
-                    : `choose size`}
+                  {picks.length === pack
+                    ? `>>> add ${packLabel} · 30.- <<<`
+                    : `choose ${pack - picks.length} more`}
                 </button>
               </div>
             </div>
+
+            {pendingSize != null && (
+              <VariantModal
+                size={pendingSize}
+                locked={locked}
+                onPick={handleVariantPick}
+                onClose={() => setPendingSize(null)}
+              />
+            )}
           </main>
         );
       };
 
       const CartPage = ({ items, onClear, locked }) => {
         const [copied, setCopied] = React.useState(false);
-        const lines = items.map(
-          (item) => `${item.name} size ${item.size}`,
+
+        const lines = items.flatMap((order) =>
+          order.picks.map(
+            (p, i) =>
+              `pack${order.pack} #${i + 1} ${p.variant} size ${p.size}`,
+          ),
         );
         const message = items.length
           ? `anell order: ${lines.join(", ")} address: [your address]`
@@ -1479,37 +2636,81 @@
           }
         };
 
+        const handlePay = (order) => {
+          if (!stripeLinkReady(order.pack)) {
+            alert(`stripe link for pack of ${order.pack} coming soon`);
+            return;
+          }
+          const link = STRIPE_LINKS[order.pack];
+          const ref = encodeURIComponent(
+            encodeOrderRef(order.pack, order.picks),
+          );
+          window.open(
+            `${link}?client_reference_id=${ref}`,
+            "_blank",
+            "noopener,noreferrer",
+          );
+        };
+
         return (
-          <main className="w-full pt-24 pb-32 px-4 md:px-8">
-            <div className="mx-auto w-full max-w-xl flex flex-col gap-6">
+          <main className="w-full py-4 px-2">
+            <div className="mx-auto w-full max-w-xl flex flex-col gap-4 border border-black bg-white p-4 font-y2k text-base text-black">
+              <p className="font-anell text-anell text-center bg-y2k-yellow border border-black py-1 text-y2k-navy">
+                ★ your cart ★
+              </p>
               {items.length === 0 ? (
-                <p>cart empty</p>
+                <p className="text-center text-gray-600">
+                  cart empty ·{" "}
+                  <span className="y2k-link">go shop something!</span>
+                </p>
               ) : (
                 <>
-                  <div className="flex flex-col gap-2">
-                    {items.map((item, i) => (
-                      <p key={`${item.id}-${item.size}-${i}`}>
-                        {item.name} · size {item.size}
+                  {items.map((order, oi) => (
+                    <div
+                      key={oi}
+                      className="flex flex-col gap-2 border border-black p-3 bg-y2k-face"
+                    >
+                      <p className="font-bold text-y2k-navy">
+                        pack of {order.pack}
                       </p>
-                    ))}
+                      {order.picks.map((p, i) => (
+                        <p key={i} className="text-sm">
+                          · {p.variant} · size {p.size}
+                        </p>
+                      ))}
+                      <button
+                        type="button"
+                        disabled={locked}
+                        onClick={() => handlePay(order)}
+                        className="y2k-btn w-fit bg-y2k-lime disabled:pointer-events-none"
+                      >
+                        {stripeLinkReady(order.pack)
+                          ? `pay with stripe · pack of ${order.pack}`
+                          : `stripe pack of ${order.pack} soon`}
+                      </button>
+                    </div>
+                  ))}
+                  <p className="text-sm">
+                    or twint <span className="text-y2k-link">{TWINT_NUMBER}</span>
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={locked}
+                      onClick={handleCopy}
+                      className="y2k-btn disabled:pointer-events-none"
+                    >
+                      {copied ? "copied!" : "copy order text"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={locked}
+                      onClick={onClear}
+                      className="y2k-btn disabled:pointer-events-none"
+                    >
+                      clear cart
+                    </button>
                   </div>
-                  <p className="opacity-60">send twint to {TWINT_NUMBER}</p>
-                  <button
-                    type="button"
-                    disabled={locked}
-                    onClick={handleCopy}
-                    className="neon-hover text-left disabled:pointer-events-none"
-                  >
-                    {copied ? "copied" : "copy order text"}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={locked}
-                    onClick={onClear}
-                    className="neon-hover text-left disabled:pointer-events-none"
-                  >
-                    clear
-                  </button>
                 </>
               )}
             </div>
@@ -1522,7 +2723,18 @@
         const [product, setProduct] = React.useState(null);
         const [cart, setCart] = React.useState([]);
         const [locked, setLocked] = React.useState(false);
-        const [marqueeKick, setMarqueeKick] = React.useState(0);
+        const TRANSITION_CYCLE = ["fall", "clock", "ripple2"];
+        const [transitionType, setTransitionType] =
+          React.useState("fall");
+        const cycleRef = React.useRef(0);
+
+        React.useEffect(() => {
+          document.body.classList.remove("bg-ring-open", "bg-cart");
+          if (view === "product") document.body.classList.add("bg-ring-open");
+          if (view === "cart") document.body.classList.add("bg-cart");
+          return () =>
+            document.body.classList.remove("bg-ring-open", "bg-cart");
+        }, [view]);
 
         const navigate = React.useCallback(
           async (nextView, nextProduct, event) => {
@@ -1530,10 +2742,14 @@
             if (nextView === view && nextProduct?.id === product?.id) return;
 
             const click = clickPointFromEvent(event);
+            // For now only fall — keep TRANSITION_CYCLE for later
+            const type = "fall";
+            cycleRef.current += 1;
+            setTransitionType(type);
             setLocked(true);
             try {
               await transitionTo({
-                type: "fall",
+                type,
                 click,
                 onReveal: () => {
                   setView(nextView);
@@ -1541,7 +2757,6 @@
                 },
                 onDone: () => {
                   setLocked(false);
-                  setMarqueeKick((k) => k + 1);
                 },
               });
             } catch (err) {
@@ -1549,49 +2764,55 @@
               setView(nextView);
               setProduct(nextProduct ?? null);
               setLocked(false);
-              setMarqueeKick((k) => k + 1);
             }
           },
           [locked, view, product],
         );
 
         return (
-          <div className="relative min-h-screen bg-white text-black text-anell leading-none">
-            <CartBar
-              count={cart.length}
+          <div className="relative min-h-screen text-y2k-link">
+            <div className="mx-auto w-full max-w-[820px] min-h-screen border border-black bg-white flex flex-col">
+              <CartBar
+                count={cart.length}
+                locked={locked}
+                onHome={(e) => navigate("home", null, e)}
+                onCart={(e) => navigate("cart", null, e)}
+              />
+
+              <div className="flex-1 flex flex-col bg-white p-2">
+                {view === "home" && (
+                  <ImageGrid
+                    locked={locked}
+                    onSelect={(p, e) => navigate("product", p, e)}
+                  />
+                )}
+                {view === "product" && product && (
+                  <ProductPage
+                    key={product.id}
+                    product={product}
+                    locked={locked}
+                    onAdd={(order) =>
+                      setCart((prev) => [...prev, order])
+                    }
+                  />
+                )}
+                {view === "cart" && (
+                  <CartPage
+                    items={cart}
+                    locked={locked}
+                    onClear={() => setCart([])}
+                  />
+                )}
+              </div>
+
+            </div>
+
+            <TransitionPicker
+              type={transitionType}
+              onChange={() => {}}
               locked={locked}
-              onHome={(e) => navigate("home", null, e)}
-              onCart={(e) => navigate("cart", null, e)}
+              types={["fall"]}
             />
-
-            {view === "home" && (
-              <ImageGrid
-                locked={locked}
-                onSelect={(p, e) => navigate("product", p, e)}
-              />
-            )}
-            {view === "product" && product && (
-              <ProductPage
-                key={product.id}
-                product={product}
-                locked={locked}
-                onAdd={(size) =>
-                  setCart((prev) => [
-                    ...prev,
-                    { id: product.id, name: product.name, size },
-                  ])
-                }
-              />
-            )}
-            {view === "cart" && (
-              <CartPage
-                items={cart}
-                locked={locked}
-                onClear={() => setCart([])}
-              />
-            )}
-
-            <Marquee paused={locked} reverseKick={marqueeKick} />
           </div>
         );
       };
