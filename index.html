@@ -146,6 +146,16 @@
         cursor: default;
       }
 
+      .y2k-panel {
+        border-style: solid;
+        border-width: 2px;
+        border-color: #ffffff #404040 #404040 #ffffff;
+        background: #c0c0c0;
+        color: #000000;
+        padding: 0.75em;
+        box-shadow: inset -1px -1px 0 #808080, inset 1px 1px 0 #dfdfdf;
+      }
+
       .y2k-photo {
         width: 100%;
         height: auto;
@@ -207,6 +217,9 @@
     <div id="root"></div>
 
     <script type="text/babel">
+      // Flip to false to bring the shop back
+      const UNDER_CONSTRUCTION = true;
+
       const TWINT_NUMBER = "+41 78 985 88 88";
       // One Stripe link per product (single / pack of 2 / pack of 3)
       const STRIPE_LINKS = {
@@ -222,9 +235,9 @@
       ];
 
       const PRODUCTS = [
-        { id: 1, src: "./gallery/01.png", alt: "one ring", name: "001", label: "one ring", pack: 1 },
-        { id: 2, src: "./gallery/02.png", alt: "pack of 2", name: "002", label: "pack of 2", pack: 2 },
-        { id: 3, src: "./gallery/03.png", alt: "pack of 3", name: "003", label: "pack of 3", pack: 3 },
+        { id: 1, src: "./gallery/01.png", alt: "one ring", name: "001", label: "one ring", pack: 1, price: 30 },
+        { id: 2, src: "./gallery/02.png", alt: "pack of 2", name: "002", label: "pack of 2", pack: 2, price: 50 },
+        { id: 3, src: "./gallery/03.png", alt: "pack of 3", name: "003", label: "pack of 3", pack: 3, price: 70 },
       ];
 
       const SIZES = [48, 50, 52, 54, 56, 58, 60, 62, 64, 66];
@@ -2419,7 +2432,7 @@
             type="button"
             disabled={locked}
             onClick={onCart}
-            className="pointer-events-auto text-y2k-yellow underline disabled:pointer-events-none hover:text-white text-[1.1rem]"
+            className="pointer-events-auto text-y2k-yellow underline disabled:pointer-events-none hover:text-white"
           >
             cart ({count})
           </button>
@@ -2441,15 +2454,18 @@
                 type="button"
                 disabled={locked}
                 onClick={(e) => onSelect(product, e)}
-                className="group flex w-full flex-col items-stretch gap-2 bg-transparent text-left disabled:pointer-events-none"
+                className="y2k-btn group flex w-full flex-col items-stretch gap-2 p-2 text-left disabled:pointer-events-none"
               >
                 <img
                   src={`./gallery/lofi/${String(product.id).padStart(2, "0")}.jpg`}
                   alt={product.alt}
-                  className="y2k-photo border border-black"
+                  className="y2k-photo"
                 />
-                <span className="y2k-link text-base leading-tight text-left w-full group-hover:text-[#ff00ff]">
-                  {product.label}
+                <span className="flex flex-col gap-0.5 text-left w-full text-base leading-tight">
+                  <span className="y2k-link group-hover:text-[#ff00ff]">
+                    {product.label}
+                  </span>
+                  <span className="text-[#0000ee]">{product.price}.-</span>
                 </span>
               </button>
             ))}
@@ -2466,31 +2482,31 @@
 
       const VariantModal = ({ size, locked, onPick, onClose }) => (
         <div
-          className="fixed inset-0 z-[10050] flex items-center justify-center bg-y2k-navy/80 px-4"
+          className="fixed inset-0 z-[10050] flex items-center justify-center bg-black/50 px-4"
           onClick={onClose}
         >
           <div
-            className="flex w-full max-w-xl flex-col gap-4 border border-black bg-y2k-face p-4"
+            className="y2k-panel flex w-full max-w-xl flex-col gap-3"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="text-center font-anell text-anell text-y2k-navy bg-y2k-yellow border border-black py-1">
+            <p className="text-center font-anell text-anell">
               size {size} · choose type
             </p>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               {RING_VARIANTS.map((v) => (
                 <button
                   key={v.id}
                   type="button"
                   disabled={locked}
                   onClick={() => onPick(v)}
-                  className="group flex flex-col items-center gap-2 disabled:pointer-events-none"
+                  className="y2k-btn flex flex-col items-center gap-2 p-2 disabled:pointer-events-none"
                 >
                   <img
                     src={v.src}
                     alt={v.name}
-                    className="block w-full h-auto object-contain border border-black"
+                    className="block w-full h-auto object-contain"
                   />
-                  <span className="y2k-link">{v.name}</span>
+                  <span>{v.name}</span>
                 </button>
               ))}
             </div>
@@ -2543,35 +2559,32 @@
 
         return (
           <main className="w-full py-4 px-2">
-            <div className="mx-auto w-full max-w-2xl flex flex-col gap-4 p-4">
+            <div className="mx-auto w-full max-w-2xl flex flex-col gap-3">
               <img
                 src={product.src}
                 alt={product.alt}
-                className="block w-full h-auto object-contain border border-black mx-auto"
+                className="block w-full h-auto object-contain y2k-panel p-1 mx-auto"
               />
 
-              <hr className="y2k-hr" />
-
-              <div className="flex flex-col gap-3 font-y2k text-base text-black">
-                <p className="font-anell text-anell text-y2k-navy text-center bg-y2k-yellow border border-black py-1">
-                  {packLabel}
+              <div className="y2k-panel flex flex-col gap-3 font-y2k text-base">
+                <p className="font-anell text-anell text-center">
+                  {packLabel} · {product.price}.-
                 </p>
 
-                <p className="font-bold text-y2k-navy">1. your rings:</p>
-                <div className="flex flex-col gap-1 border border-black p-2 bg-[#ffffcc]">
-                  {Array.from({ length: pack }).map((_, i) => (
-                    <p
-                      key={i}
-                      className={picks[i] ? "text-black" : "text-gray-500"}
-                    >
-                      · {slotLabel(i)}
-                    </p>
-                  ))}
+                <div className="flex flex-col gap-2">
+                  <p>1. your rings:</p>
+                  <div className="flex flex-col gap-2">
+                    {Array.from({ length: pack }).map((_, i) => (
+                      <div key={i} className="y2k-btn text-left cursor-default">
+                        {slotLabel(i)}
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {picks.length < pack && (
-                  <>
-                    <p className="font-bold text-y2k-navy">2. pick a size:</p>
+                  <div className="flex flex-col gap-2">
+                    <p>2. pick a size:</p>
                     <div className="flex flex-wrap gap-2">
                       {SIZES.map((s) => (
                         <button
@@ -2585,17 +2598,17 @@
                         </button>
                       ))}
                     </div>
-                  </>
+                  </div>
                 )}
 
                 <button
                   type="button"
                   disabled={locked || picks.length !== pack}
                   onClick={handleAdd}
-                  className="y2k-btn mt-2 bg-y2k-lime disabled:pointer-events-none disabled:opacity-40 text-left w-fit"
+                  className="y2k-btn disabled:pointer-events-none disabled:opacity-40 text-left w-fit"
                 >
                   {picks.length === pack
-                    ? `>>> add ${packLabel} · 30.- <<<`
+                    ? `>>> add ${packLabel} · ${product.price}.- <<<`
                     : `choose ${pack - picks.length} more`}
                 </button>
               </div>
@@ -2654,27 +2667,27 @@
 
         return (
           <main className="w-full py-4 px-2">
-            <div className="mx-auto w-full max-w-xl flex flex-col gap-4 border border-black bg-white p-4 font-y2k text-base text-black">
-              <p className="font-anell text-anell text-center bg-y2k-yellow border border-black py-1 text-y2k-navy">
+            <div className="mx-auto w-full max-w-xl y2k-panel flex flex-col gap-3 font-y2k text-base">
+              <p className="font-anell text-anell text-center">
                 ★ your cart ★
               </p>
               {items.length === 0 ? (
-                <p className="text-center text-gray-600">
+                <p className="text-center">
                   cart empty ·{" "}
-                  <span className="y2k-link">go shop something!</span>
+                  <span className="underline">go shop something!</span>
                 </p>
               ) : (
                 <>
                   {items.map((order, oi) => (
                     <div
                       key={oi}
-                      className="flex flex-col gap-2 border border-black p-3 bg-y2k-face"
+                      className="y2k-btn flex flex-col gap-2 text-left cursor-default"
                     >
-                      <p className="font-bold text-y2k-navy">
+                      <p>
                         pack of {order.pack}
                       </p>
                       {order.picks.map((p, i) => (
-                        <p key={i} className="text-sm">
+                        <p key={i}>
                           · {p.variant} · size {p.size}
                         </p>
                       ))}
@@ -2682,7 +2695,7 @@
                         type="button"
                         disabled={locked}
                         onClick={() => handlePay(order)}
-                        className="y2k-btn w-fit bg-y2k-lime disabled:pointer-events-none"
+                        className="y2k-btn w-fit disabled:pointer-events-none"
                       >
                         {stripeLinkReady(order.pack)
                           ? `pay with stripe · pack of ${order.pack}`
@@ -2690,8 +2703,8 @@
                       </button>
                     </div>
                   ))}
-                  <p className="text-sm">
-                    or twint <span className="text-y2k-link">{TWINT_NUMBER}</span>
+                  <p>
+                    or twint <span className="underline">{TWINT_NUMBER}</span>
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <button
@@ -2817,8 +2830,29 @@
         );
       };
 
+      const UnderConstruction = () => (
+        <div className="relative min-h-screen flex items-center justify-center p-4">
+          <div className="mx-auto w-full max-w-md y2k-panel flex flex-col gap-4 text-center font-y2k text-base text-black">
+            <header className="w-full bg-[#000080] text-y2k-yellow px-2 py-1 font-anell text-anell leading-none border border-black">
+              ★ anell ★
+            </header>
+            <p className="y2k-blink text-red-600 font-bold text-lg">
+              under construction
+            </p>
+            <p>
+              this web shop is being built.
+              <br />
+              please check back soon.
+            </p>
+            <p className="text-sm text-[#0000ee]">
+              © 2001–2003 anell · no rights reserved
+            </p>
+          </div>
+        </div>
+      );
+
       const root = ReactDOM.createRoot(document.getElementById("root"));
-      root.render(<App />);
+      root.render(UNDER_CONSTRUCTION ? <UnderConstruction /> : <App />);
     </script>
   </body>
 </html>
